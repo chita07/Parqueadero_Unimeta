@@ -1,0 +1,482 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f6fa;
+    color: #333;
+}
+
+/* Header */
+header {
+    background-color: #E30614;
+    padding: 20px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-img {
+    height: 80px;
+    width: auto;
+    object-fit: contain;
+}
+
+nav {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-login {
+    background-color: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 8px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.18s ease-in-out;
+}
+
+.btn-login:hover {
+    background-color: white;
+    color: #E30614;
+}
+
+.btn-register {
+    background-color: white;
+    color: #E30614;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.18s ease-in-out;
+}
+
+.btn-register:hover {
+    background-color: #f5f5f5;
+}
+
+/* Hero Section */
+.hero {
+    background: #ffffff;
+    color: #333;
+    padding: 80px 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    display: none;
+}
+
+.hero-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+}
+
+.hero-content h1 {
+    font-size: 42px;
+    margin-bottom: 20px;
+    line-height: 1.3;
+    color: #E30614;
+    font-weight: 600;
+}
+
+.hero-content p {
+    font-size: 16px;
+    margin-bottom: 30px;
+    color: #666;
+    font-weight: 400;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 15px;
+}
+
+.btn-primary {
+    background-color: #E30614;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    background-color: #c20410;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: #E30614;
+    border: 1px solid #E30614;
+    padding: 12px 30px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+    background-color: #E30614;
+    color: white;
+}
+
+.hero-image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.parking-image {
+    font-size: 200px;
+    opacity: 0.1;
+}
+
+.hero-rau {
+    max-width: 380px;
+    width: 100%;
+    height: auto;
+    border-radius: 16px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    opacity: 0.95;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 60px auto;
+    padding: 0 20px;
+}
+
+/* Tarifas Section */
+.tarifas-section {
+    background-color: #FFCD1C;
+    padding: 60px 0;
+    margin-top: 60px;
+    width: 100%;
+}
+
+.tarifas-title {
+    font-size: 36px;
+    color: #E30614;
+    margin: 0 auto 40px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    position: relative;
+    display: table;
+}
+
+.tarifas-title::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 100px;
+    height: 5px;
+    background: linear-gradient(90deg, #FFC000, #E30614);
+    border-radius: 3px;
+    transform-origin: left center;
+    animation: underlineSlide 600ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms backwards;
+}
+
+@keyframes underlineSlide {
+    from {
+        width: 0;
+        opacity: 0;
+    }
+
+    to {
+        width: 100px;
+        opacity: 1;
+    }
+}
+
+.tarifas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+
+.tarifa-card {
+    background: white;
+    padding: 32px 24px;
+    border-radius: 14px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+    text-align: center;
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s;
+    position: relative;
+    overflow: hidden;
+    border-top: 4px solid #E30614;
+}
+
+.tarifa-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 192, 0, 0.06), transparent);
+    transition: left 0.4s ease;
+}
+
+.tarifa-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-5px);
+}
+
+.tarifa-card:hover::before {
+    left: 100%;
+}
+
+/* Popular card highlight */
+.tarifa-card.popular {
+    border-top-color: #FFCD1C;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.tarifa-card.popular:hover {
+    box-shadow: 0 10px 28px rgba(255, 205, 28, 0.25);
+}
+
+.tarifa-badge {
+    position: absolute;
+    top: 12px;
+    right: -28px;
+    background: #E30614;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 32px;
+    transform: rotate(45deg);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Period Label */
+.tarifa-label {
+    display: inline-block;
+    background-color: rgba(227, 6, 20, 0.08);
+    color: #E30614;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+}
+
+.tarifa-card:hover .tarifa-icon {
+    transform: scale(1.05);
+}
+
+.tarifa-card .tarifa-icon {
+    font-size: 44px;
+    margin-bottom: 10px;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.tarifa-card h3 {
+    font-size: 15px;
+    color: #555;
+    margin-bottom: 12px;
+    font-weight: 500;
+}
+
+.tarifa-card .tarifa-price {
+    font-size: 30px;
+    color: #E30614;
+    font-weight: 800;
+    margin-bottom: 22px;
+}
+
+.tarifa-card .tarifa-price span {
+    font-size: 13px;
+    color: #999;
+    font-weight: 400;
+    margin-left: 4px;
+}
+
+.btn-seleccionar {
+    background-color: #FFCD1C;
+    color: #333;
+    border: none;
+    padding: 10px 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+}
+
+.btn-seleccionar:hover {
+    background-color: #FFB300;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(255, 179, 0, 0.3);
+}
+
+/* ¿Cómo funciona? Section */
+.como-funciona-section {
+    margin-top: 80px;
+    padding: 60px 0;
+}
+
+.como-funciona-title {
+    font-size: 32px;
+    color: #333;
+    margin-bottom: 50px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.pasos-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.paso-card {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.paso-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
+}
+
+.paso-numero {
+    background-color: #E30614;
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    margin: 0 auto 20px;
+}
+
+.paso-card h3 {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.paso-card p {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.paso-imagen {
+    font-size: 80px;
+    opacity: 0.6;
+    margin-top: 20px;
+}
+
+/* Footer */
+footer {
+    background-color: #f9f9f9;
+    color: #666;
+    padding: 40px 20px;
+    text-align: center;
+    margin-top: 80px;
+    border-top: 1px solid #f0f0f0;
+}
+
+footer p {
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero-wrapper {
+        grid-template-columns: 1fr;
+        gap: 40px;
+    }
+
+    .hero-content h1 {
+        font-size: 32px;
+    }
+
+    .hero-buttons {
+        flex-direction: column;
+    }
+
+    .parking-image {
+        font-size: 120px;
+    }
+
+    .tarifas-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .tarifa-card {
+        padding: 20px;
+    }
+
+    .pasos-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .tarifas-section {
+        padding: 0;
+    }
+
+    .hero-rau {
+        max-width: 220px;
+    }
+}

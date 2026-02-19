@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pago - Parqueadero Unimeta</title>
+    <link rel="stylesheet" href="pago.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <img src="imagenes/logo_unimeta.png" alt="Logo Unimeta" class="logo-img">
+            </div>
+            <nav>
+                <button class="btn-login">Iniciar Sesión</button>
+                <button class="btn-register">Registrarse</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="pago-container">
+        <!-- Step 1: Seleccionar Servicio -->
+        <section class="step-section" id="step-servicio">
+            <div class="step-header">
+                <div class="step-number active">1</div>
+                <h2>Selecciona tu plan</h2>
+            </div>
+
+            <div class="planes-grid">
+                <div class="plan-card" data-plan="diario" data-precio="2000">
+                    <div class="plan-icon">🏍️</div>
+                    <div class="plan-name">Diario</div>
+                    <div class="plan-price">$2,000 <span>/ día</span></div>
+                    <button class="btn-plan" onclick="seleccionarPlan('diario', 2000, 'Diario')">Seleccionar</button>
+                </div>
+
+                <div class="plan-card" data-plan="semanal" data-precio="10000">
+                    <div class="plan-badge">Popular</div>
+                    <div class="plan-icon">🏍️</div>
+                    <div class="plan-name">Semanal</div>
+                    <div class="plan-price">$10,000 <span>/ semana</span></div>
+                    <button class="btn-plan" onclick="seleccionarPlan('semanal', 10000, 'Semanal')">Seleccionar</button>
+                </div>
+
+                <div class="plan-card" data-plan="mensual" data-precio="45000">
+                    <div class="plan-icon">🏍️</div>
+                    <div class="plan-name">Mensual</div>
+                    <div class="plan-price">$45,000 <span>/ mes</span></div>
+                    <button class="btn-plan" onclick="seleccionarPlan('mensual', 45000, 'Mensual')">Seleccionar</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 2: Información del Pago (hidden by default) -->
+        <section class="step-section hidden" id="step-pago">
+            <div class="step-header">
+                <div class="step-number active">2</div>
+                <h2>Información de Pago</h2>
+            </div>
+
+            <div class="pago-layout">
+                <!-- Formulario -->
+                <div class="pago-form-card">
+                    <h3 class="form-title">Datos del Vehículo</h3>
+                    <div class="form-group">
+                        <label for="placa">Placa del Vehículo</label>
+                        <input type="text" id="placa" placeholder="Ej: ABC-123" maxlength="7">
+                    </div>
+                    <div class="form-group">
+                        <label for="nombre">Nombre Completo</label>
+                        <input type="text" id="nombre" placeholder="Ej: Juan Pérez">
+                    </div>
+                    <div class="form-group">
+                        <label for="cedula">Número de Cédula</label>
+                        <input type="text" id="cedula" placeholder="Ej: 1234567890">
+                    </div>
+                    <div class="form-group">
+                        <label for="telefono">Teléfono</label>
+                        <input type="tel" id="telefono" placeholder="Ej: 3001234567">
+                    </div>
+                </div>
+
+                <!-- Resumen del Pago -->
+                <div class="pago-resumen-card">
+                    <h3 class="resumen-title">Resumen de Pago</h3>
+
+                    <div class="resumen-plan">
+                        <div class="resumen-plan-icon">🏍️</div>
+                        <div class="resumen-plan-info">
+                            <span class="resumen-plan-type" id="resumen-tipo">—</span>
+                            <span class="resumen-plan-label">Plan seleccionado</span>
+                        </div>
+                    </div>
+
+                    <div class="resumen-detalles">
+                        <div class="resumen-row">
+                            <span class="resumen-label">Servicio</span>
+                            <span class="resumen-value" id="resumen-servicio">—</span>
+                        </div>
+                        <div class="resumen-row">
+                            <span class="resumen-label">Tipo</span>
+                            <span class="resumen-value">Moto</span>
+                        </div>
+                        <div class="resumen-row">
+                            <span class="resumen-label">Placa</span>
+                            <span class="resumen-value" id="resumen-placa">—</span>
+                        </div>
+                        <div class="resumen-row total">
+                            <span class="resumen-label">Total a Pagar</span>
+                            <span class="resumen-value resumen-total" id="resumen-total">$0</span>
+                        </div>
+                    </div>
+
+                    <!-- Método de Pago -->
+                    <h4 class="metodo-title">Método de Pago</h4>
+                    <div class="metodos-grid">
+                        <label class="metodo-option">
+                            <input type="radio" name="metodo" value="nequi">
+                            <div class="metodo-card">
+                                <span class="metodo-icon">📱</span>
+                                <span class="metodo-name">Nequi</span>
+                            </div>
+                        </label>
+                        <label class="metodo-option">
+                            <input type="radio" name="metodo" value="pse">
+                            <div class="metodo-card">
+                                <span class="metodo-icon">🏦</span>
+                                <span class="metodo-name">PSE</span>
+                            </div>
+                        </label>
+                        <label class="metodo-option">
+                            <input type="radio" name="metodo" value="tarjeta">
+                            <div class="metodo-card">
+                                <span class="metodo-icon">💳</span>
+                                <span class="metodo-name">Tarjeta</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <button class="btn-confirmar" onclick="confirmarPago()">Confirmar Pago</button>
+                    <button class="btn-cambiar" onclick="cambiarPlan()">← Cambiar plan</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Step 3: Confirmación (hidden by default) -->
+        <section class="step-section hidden" id="step-confirmacion">
+            <div class="confirmacion-card">
+                <div class="confirmacion-icon">✅</div>
+                <h2 class="confirmacion-title">¡Pago Exitoso!</h2>
+                <p class="confirmacion-msg">Tu suscripción ha sido activada correctamente.</p>
+
+                <div class="confirmacion-detalles">
+                    <div class="confirmacion-row">
+                        <span class="confirmacion-label">Plan</span>
+                        <span class="confirmacion-value" id="conf-plan">—</span>
+                    </div>
+                    <div class="confirmacion-row">
+                        <span class="confirmacion-label">Placa</span>
+                        <span class="confirmacion-value" id="conf-placa">—</span>
+                    </div>
+                    <div class="confirmacion-row">
+                        <span class="confirmacion-label">Nombre</span>
+                        <span class="confirmacion-value" id="conf-nombre">—</span>
+                    </div>
+                    <div class="confirmacion-row">
+                        <span class="confirmacion-label">Monto Pagado</span>
+                        <span class="confirmacion-value conf-total" id="conf-total">$0</span>
+                    </div>
+                    <div class="confirmacion-row">
+                        <span class="confirmacion-label">Método</span>
+                        <span class="confirmacion-value" id="conf-metodo">—</span>
+                    </div>
+                    <div class="confirmacion-row">
+                        <span class="confirmacion-label">Referencia</span>
+                        <span class="confirmacion-value" id="conf-ref">—</span>
+                    </div>
+                </div>
+
+                <button class="btn-volver" onclick="location.href='index.html'">Volver al Inicio</button>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Parqueadero Unimeta. Todos los derechos reservados.</p>
+    </footer>
+
+    <script>
+        let planSeleccionado = null;
+        let precioSeleccionado = 0;
+        let nombrePlan = '';
+
+        function seleccionarPlan(plan, precio, nombre) {
+            planSeleccionado = plan;
+            precioSeleccionado = precio;
+            nombrePlan = nombre;
+
+            // Highlight selected card
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.querySelector(`[data-plan="${plan}"]`).classList.add('selected');
+
+            // Update resumen
+            document.getElementById('resumen-tipo').textContent = nombre;
+            document.getElementById('resumen-servicio').textContent = 'Moto - Tarifa ' + nombre;
+            document.getElementById('resumen-total').textContent = '$' + precio.toLocaleString('es-CO');
+
+            // Show step 2
+            document.getElementById('step-pago').classList.remove('hidden');
+            document.getElementById('step-pago').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Update placa in resumen in real-time
+        document.getElementById('placa').addEventListener('input', function () {
+            const valor = this.value.toUpperCase() || '—';
+            document.getElementById('resumen-placa').textContent = valor;
+            this.value = this.value.toUpperCase();
+        });
+
+        function confirmarPago() {
+            const placa = document.getElementById('placa').value.trim();
+            const nombre = document.getElementById('nombre').value.trim();
+            const cedula = document.getElementById('cedula').value.trim();
+            const metodo = document.querySelector('input[name="metodo"]:checked');
+
+            if (!placa) {
+                alert('Por favor ingresa la placa del vehículo.');
+                return;
+            }
+            if (!nombre) {
+                alert('Por favor ingresa tu nombre completo.');
+                return;
+            }
+            if (!cedula) {
+                alert('Por favor ingresa tu número de cédula.');
+                return;
+            }
+            if (!metodo) {
+                alert('Por favor selecciona un método de pago.');
+                return;
+            }
+
+            const metodoNombres = { nequi: 'Nequi', pse: 'PSE', tarjeta: 'Tarjeta de Crédito/Débito' };
+            const ref = 'PQ-' + Date.now().toString().slice(-8);
+
+            document.getElementById('conf-plan').textContent = nombrePlan;
+            document.getElementById('conf-placa').textContent = placa.toUpperCase();
+            document.getElementById('conf-nombre').textContent = nombre;
+            document.getElementById('conf-total').textContent = '$' + precioSeleccionado.toLocaleString('es-CO');
+            document.getElementById('conf-metodo').textContent = metodoNombres[metodo.value];
+            document.getElementById('conf-ref').textContent = ref;
+
+            document.getElementById('step-servicio').classList.add('hidden');
+            document.getElementById('step-pago').classList.add('hidden');
+            document.getElementById('step-confirmacion').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cambiarPlan() {
+            document.getElementById('step-pago').classList.add('hidden');
+            document.querySelectorAll('.plan-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+
+</html>

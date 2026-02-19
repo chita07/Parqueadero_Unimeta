@@ -1,0 +1,599 @@
+/* ===== Reset & Base ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f6fa;
+    color: #333;
+    min-height: 100vh;
+}
+
+/* ===== Header ===== */
+header {
+    background-color: #E30614;
+    padding: 16px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo-img {
+    height: 60px;
+    width: auto;
+    object-fit: contain;
+}
+
+nav {
+    display: flex;
+    gap: 12px;
+}
+
+.btn-login {
+    background-color: transparent;
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.btn-login:hover {
+    background-color: white;
+    color: #E30614;
+}
+
+.btn-register {
+    background-color: white;
+    color: #E30614;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.btn-register:hover {
+    background-color: #f5f5f5;
+}
+
+/* ===== Main Container ===== */
+.pago-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+/* ===== Step Sections ===== */
+.step-section {
+    margin-bottom: 40px;
+}
+
+.step-section.hidden {
+    display: none;
+}
+
+.step-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 28px;
+}
+
+.step-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #ddd;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.step-number.active {
+    background-color: #E30614;
+}
+
+.step-header h2 {
+    font-size: 22px;
+    color: #333;
+    font-weight: 700;
+}
+
+/* ===== Plan Cards ===== */
+.planes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.plan-card {
+    background: white;
+    border: 2px solid #eee;
+    border-radius: 14px;
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.plan-card:hover {
+    border-color: #E30614;
+    box-shadow: 0 6px 20px rgba(227, 6, 20, 0.1);
+    transform: translateY(-3px);
+}
+
+.plan-card.selected {
+    border-color: #E30614;
+    background: linear-gradient(135deg, #fff5f5, #ffffff);
+    box-shadow: 0 8px 24px rgba(227, 6, 20, 0.15);
+}
+
+.plan-card.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 24px;
+    height: 24px;
+    background: #E30614;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.plan-badge {
+    position: absolute;
+    top: 10px;
+    left: -26px;
+    background: #E30614;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 28px;
+    transform: rotate(-45deg);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.plan-icon {
+    font-size: 38px;
+    margin-bottom: 10px;
+}
+
+.plan-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #E30614;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 6px;
+    background: rgba(227, 6, 20, 0.08);
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 12px;
+}
+
+.plan-price {
+    font-size: 28px;
+    font-weight: 800;
+    color: #333;
+    margin: 12px 0 18px;
+}
+
+.plan-price span {
+    font-size: 13px;
+    font-weight: 400;
+    color: #999;
+}
+
+.btn-plan {
+    background-color: #FFCD1C;
+    color: #333;
+    border: none;
+    padding: 10px 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-plan:hover {
+    background-color: #FFB300;
+    transform: translateY(-1px);
+}
+
+/* ===== Pago Layout ===== */
+.pago-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+}
+
+/* ===== Form Card ===== */
+.pago-form-card {
+    background: white;
+    border-radius: 14px;
+    padding: 28px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.form-title {
+    font-size: 17px;
+    color: #333;
+    font-weight: 700;
+    margin-bottom: 22px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid #e8e8e8;
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background: #fafafa;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #E30614;
+    box-shadow: 0 0 0 3px rgba(227, 6, 20, 0.08);
+    background: white;
+}
+
+/* ===== Resumen Card ===== */
+.pago-resumen-card {
+    background: white;
+    border-radius: 14px;
+    padding: 28px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border-top: 4px solid #E30614;
+}
+
+.resumen-title {
+    font-size: 17px;
+    color: #333;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+.resumen-plan {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: linear-gradient(135deg, #fff5f5, #fffbeb);
+    padding: 16px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.resumen-plan-icon {
+    font-size: 32px;
+}
+
+.resumen-plan-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.resumen-plan-type {
+    font-size: 20px;
+    font-weight: 800;
+    color: #E30614;
+}
+
+.resumen-plan-label {
+    font-size: 12px;
+    color: #999;
+}
+
+.resumen-detalles {
+    margin-bottom: 24px;
+}
+
+.resumen-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f3f3f3;
+}
+
+.resumen-row:last-child {
+    border-bottom: none;
+}
+
+.resumen-row.total {
+    border-top: 2px solid #E30614;
+    border-bottom: none;
+    padding-top: 14px;
+    margin-top: 6px;
+}
+
+.resumen-label {
+    font-size: 14px;
+    color: #888;
+}
+
+.resumen-value {
+    font-size: 14px;
+    color: #333;
+    font-weight: 600;
+}
+
+.resumen-total {
+    font-size: 24px;
+    font-weight: 800;
+    color: #E30614;
+}
+
+/* ===== Método de Pago ===== */
+.metodo-title {
+    font-size: 14px;
+    color: #333;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.metodos-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.metodo-option {
+    cursor: pointer;
+}
+
+.metodo-option input[type="radio"] {
+    display: none;
+}
+
+.metodo-card {
+    border: 2px solid #eee;
+    border-radius: 10px;
+    padding: 14px 8px;
+    text-align: center;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.metodo-card:hover {
+    border-color: #ccc;
+}
+
+.metodo-option input[type="radio"]:checked+.metodo-card {
+    border-color: #E30614;
+    background: rgba(227, 6, 20, 0.04);
+    box-shadow: 0 0 0 3px rgba(227, 6, 20, 0.08);
+}
+
+.metodo-icon {
+    font-size: 24px;
+}
+
+.metodo-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #555;
+}
+
+/* ===== Buttons ===== */
+.btn-confirmar {
+    width: 100%;
+    background: #E30614;
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    letter-spacing: 0.3px;
+}
+
+.btn-confirmar:hover {
+    background: #c20410;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(227, 6, 20, 0.25);
+}
+
+.btn-cambiar {
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 12px;
+    color: #888;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.2s;
+}
+
+.btn-cambiar:hover {
+    color: #E30614;
+}
+
+/* ===== Confirmación ===== */
+.confirmacion-card {
+    background: white;
+    border-radius: 16px;
+    padding: 50px 40px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.confirmacion-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.confirmacion-title {
+    font-size: 26px;
+    color: #333;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.confirmacion-msg {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 30px;
+}
+
+.confirmacion-detalles {
+    text-align: left;
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 28px;
+    border-left: 4px solid #E30614;
+}
+
+.confirmacion-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.confirmacion-row:last-child {
+    border-bottom: none;
+}
+
+.confirmacion-label {
+    color: #888;
+}
+
+.confirmacion-value {
+    color: #333;
+    font-weight: 600;
+}
+
+.conf-total {
+    color: #E30614;
+    font-weight: 800;
+    font-size: 18px;
+}
+
+.btn-volver {
+    background: #FFCD1C;
+    color: #333;
+    border: none;
+    padding: 14px 40px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-volver:hover {
+    background: #FFB300;
+    transform: translateY(-1px);
+}
+
+/* ===== Footer ===== */
+footer {
+    background-color: #f9f9f9;
+    color: #666;
+    padding: 30px 20px;
+    text-align: center;
+    border-top: 1px solid #f0f0f0;
+    margin-top: 60px;
+}
+
+footer p {
+    font-size: 13px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .planes-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .pago-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .pago-container {
+        padding: 24px 16px;
+    }
+
+    .plan-price {
+        font-size: 24px;
+    }
+
+    .confirmacion-card {
+        padding: 30px 20px;
+    }
+
+    .metodos-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+}

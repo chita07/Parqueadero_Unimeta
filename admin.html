@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Parqueadero Unimeta</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <img src="imagenes/logo_unimeta.png" alt="Logo Unimeta" class="logo-img">
+                <span class="logo-text">Panel Administrativo</span>
+            </div>
+            <div class="header-nav">
+                <span class="admin-badge">👤 Administrador</span>
+                <button class="btn-logout">Cerrar Sesión</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="admin-container">
+        <!-- Page Title -->
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Resumen general del parqueadero — 18 de Febrero, 2026</p>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon motos">🏍️</div>
+                <div class="stat-info">
+                    <h3>Motos Hoy</h3>
+                    <div class="stat-number">24</div>
+                    <div class="stat-change">↑ +3 vs ayer</div>
+                </div>
+            </div>
+
+
+            <div class="stat-card">
+                <div class="stat-icon ingresos">💰</div>
+                <div class="stat-info">
+                    <h3>Ingresos Hoy</h3>
+                    <div class="stat-number">$156,000</div>
+                    <div class="stat-change">↑ +12%</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon activas">📋</div>
+                <div class="stat-info">
+                    <h3>Suscripciones Activas</h3>
+                    <div class="stat-number">47</div>
+                    <div class="stat-change negative">↓ -2 esta semana</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Servicios Registrados Hoy -->
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="section-title">Servicios Registrados Hoy</h2>
+                </div>
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Buscar por placa...">
+                    <select class="filter-select">
+                        <option value="">Todas las tarifas</option>
+                        <option value="dia">Día</option>
+                        <option value="semana">Semana</option>
+                        <option value="mes">Mes</option>
+                    </select>
+                    <button class="btn-search">Buscar</button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Placa</th>
+                            <th>Vehículo</th>
+                            <th>Tarifa</th>
+                            <th>Hora Ingreso</th>
+                            <th>Estado</th>
+                            <th>Monto</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td><strong>ABC-123</strong></td>
+                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
+                            <td>Horaria</td>
+                            <td>7:30 AM</td>
+                            <td><span class="badge badge-active">Activo</span></td>
+                            <td>$1,000</td>
+                            <td><button class="btn-action btn-view">Ver</button></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td><strong>XYZ-456</strong></td>
+                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
+                            <td>Día</td>
+                            <td>8:15 AM</td>
+                            <td><span class="badge badge-active">Activo</span></td>
+                            <td>$2,000</td>
+                            <td><button class="btn-action btn-view">Ver</button></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td><strong>DEF-789</strong></td>
+                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
+                            <td>Horaria</td>
+                            <td>9:00 AM</td>
+                            <td><span class="badge badge-pending">Pendiente</span></td>
+                            <td>$2,000</td>
+                            <td><button class="btn-action btn-view">Ver</button></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><strong>GHI-012</strong></td>
+                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
+                            <td>Semana</td>
+                            <td>9:45 AM</td>
+                            <td><span class="badge badge-active">Activo</span></td>
+                            <td>$50,000</td>
+                            <td><button class="btn-action btn-view">Ver</button></td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td><strong>JKL-345</strong></td>
+                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
+                            <td>Día</td>
+                            <td>10:20 AM</td>
+                            <td><span class="badge badge-expired">Salió</span></td>
+                            <td>$2,000</td>
+                            <td><button class="btn-action btn-view">Ver</button></td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td><strong>MNO-678</strong></td>
+                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
+                            <td>Mes</td>
+                            <td>11:00 AM</td>
+                            <td><span class="badge badge-active">Activo</span></td>
+                            <td>$180,000</td>
+                            <td><button class="btn-action btn-view">Ver</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="quick-stats">
+                <div class="quick-stat">
+                    <div class="qs-number">6</div>
+                    <div class="qs-label">Registros</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="qs-number">5</div>
+                    <div class="qs-label">Activos</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="qs-number">1</div>
+                    <div class="qs-label">Salieron</div>
+                </div>
+                <div class="quick-stat">
+                    <div class="qs-number">$251,000</div>
+                    <div class="qs-label">Total</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout: Consultar Suscripciones + Resultado -->
+        <div class="two-columns">
+            <!-- Consulta de Suscripciones -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="section-title">Consultar Suscripciones</h2>
+                </div>
+                <div class="lookup-form">
+                    <div class="form-group">
+                        <label for="lookup-placa">Número de Placa</label>
+                        <input type="text" id="lookup-placa" placeholder="Ej: ABC-123">
+                    </div>
+                    <div class="form-group">
+                        <label for="lookup-tarifa">Tarifa</label>
+                        <select id="lookup-tarifa">
+                            <option value="">Todas</option>
+                            <option value="dia">Día</option>
+                            <option value="semana">Semana</option>
+                            <option value="mes">Mes</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="lookup-estado">Estado</label>
+                        <select id="lookup-estado">
+                            <option value="">Todos</option>
+                            <option value="activa">Activa</option>
+                            <option value="vencida">Vencida</option>
+                            <option value="pendiente">Pendiente</option>
+                        </select>
+                    </div>
+                    <button class="btn-lookup">🔍 Consultar Base de Datos</button>
+                </div>
+            </div>
+
+            <!-- Resultado de Consulta -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2 class="section-title">Resultado de Consulta</h2>
+                </div>
+                <div class="lookup-result">
+                    <!-- Placeholder cuando no hay resultado -->
+                    <div class="result-placeholder" style="display: none;">
+                        <div class="icon">🔍</div>
+                        <p>Ingresa una placa para consultar<br>la suscripción en la base de datos</p>
+                    </div>
+
+                    <!-- Ejemplo de resultado encontrado -->
+                    <div class="result-card">
+                        <div class="result-row">
+                            <span class="result-label">Placa</span>
+                            <span class="result-value">ABC-123</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Propietario</span>
+                            <span class="result-value">Juan Pérez</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Vehículo</span>
+                            <span class="result-value">🏍️ Moto</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Suscripción</span>
+                            <span class="result-value">Mensual</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Inicio</span>
+                            <span class="result-value">01/02/2026</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Vencimiento</span>
+                            <span class="result-value">01/03/2026</span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Estado</span>
+                            <span class="result-value"><span class="badge badge-active">Activa</span></span>
+                        </div>
+                        <div class="result-row">
+                            <span class="result-label">Monto Pagado</span>
+                            <span class="result-value" style="color: #E30614; font-weight: 700;">$180,000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráfico de Distribución -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="section-title">Distribución de Suscripciones</h2>
+            </div>
+            <div class="chart-container">
+                <div class="pie-chart-wrapper">
+                    <div class="pie-chart">
+                        <div class="pie-center">
+                            <span class="pie-total-number">47</span>
+                            <span class="pie-total-label">Total</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-legend">
+                    <div class="legend-item">
+                        <span class="legend-color diario"></span>
+                        <div class="legend-info">
+                            <span class="legend-label">Diario</span>
+                            <span class="legend-value">12 usuarios</span>
+                            <span class="legend-percent">25.5%</span>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color semanal"></span>
+                        <div class="legend-info">
+                            <span class="legend-label">Semanal</span>
+                            <span class="legend-value">20 usuarios</span>
+                            <span class="legend-percent">42.6%</span>
+                        </div>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color mensual"></span>
+                        <div class="legend-info">
+                            <span class="legend-label">Mensual</span>
+                            <span class="legend-value">15 usuarios</span>
+                            <span class="legend-percent">31.9%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Parqueadero Unimeta — Panel Administrativo. Todos los derechos reservados.</p>
+    </footer>
+</body>
+
+</html>
