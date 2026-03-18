@@ -435,6 +435,32 @@ footer p {
 
 /* Responsive */
 @media (max-width: 768px) {
+
+    html,
+    body {
+        overflow-x: hidden;
+    }
+
+    .header-content {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 0 15px;
+    }
+
+    .logo-img {
+        height: 50px;
+    }
+
+    nav {
+        gap: 8px;
+    }
+
+    .btn-login,
+    .btn-register {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
     .hero-wrapper {
         grid-template-columns: 1fr;
         gap: 40px;
@@ -447,8 +473,6 @@ footer p {
     .hero-buttons {
         flex-direction: column;
     }
-
-
 
     .tarifas-grid {
         grid-template-columns: 1fr;
