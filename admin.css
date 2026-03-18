@@ -574,15 +574,13 @@ header {
     width: 220px;
     height: 220px;
     border-radius: 50%;
-    /* Diario 25.5% = 0-91.8deg, Semanal 42.6% = 91.8-245.16deg, Mensual 31.9% = 245.16-360deg */
-    background: conic-gradient(#E30614 0deg 91.8deg,
-            #FFCD1C 91.8deg 245.2deg,
-            #333333 245.2deg 360deg);
+    background: #e0e0e0;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: background 0.4s ease;
 }
 
 .pie-center {
@@ -664,6 +662,111 @@ header {
     font-size: 13px;
     font-weight: 600;
     color: #E30614;
+}
+
+/* ===== Registro Manual Form ===== */
+.registro-manual-form {
+    padding: 24px;
+}
+
+.registro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.registro-manual-form .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.registro-manual-form .form-group input,
+.registro-manual-form .form-group select {
+    width: 100%;
+    padding: 11px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.registro-manual-form .form-group input:focus,
+.registro-manual-form .form-group select:focus {
+    outline: none;
+    border-color: #E30614;
+    box-shadow: 0 0 0 3px rgba(227, 6, 20, 0.1);
+}
+
+.btn-registrar {
+    background-color: #2eb85c;
+    color: white;
+    border: none;
+    padding: 13px 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 15px;
+    width: 100%;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-registrar:hover {
+    background-color: #249a4d;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(46, 184, 92, 0.3);
+}
+
+.btn-registrar:disabled {
+    background-color: #a0d8b0;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.registro-exito {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 14px 20px;
+    background: rgba(46, 184, 92, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid #2eb85c;
+    animation: slideIn 0.3s ease;
+}
+
+.registro-exito.hidden {
+    display: none;
+}
+
+.exito-icon {
+    font-size: 20px;
+}
+
+.exito-msg {
+    font-size: 14px;
+    color: #1e8449;
+    font-weight: 500;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* ===== Footer ===== */

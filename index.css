@@ -164,18 +164,12 @@ nav {
     align-items: center;
 }
 
-.parking-image {
-    font-size: 200px;
-    opacity: 0.1;
-}
+
 
 .hero-rau {
     max-width: 380px;
     width: 100%;
     height: auto;
-    border-radius: 16px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-    opacity: 0.95;
 }
 
 /* Container */
@@ -454,9 +448,7 @@ footer p {
         flex-direction: column;
     }
 
-    .parking-image {
-        font-size: 120px;
-    }
+
 
     .tarifas-grid {
         grid-template-columns: 1fr;

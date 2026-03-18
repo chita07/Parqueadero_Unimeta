@@ -35,18 +35,17 @@
                 <div class="stat-icon motos">🏍️</div>
                 <div class="stat-info">
                     <h3>Motos Hoy</h3>
-                    <div class="stat-number">24</div>
-                    <div class="stat-change">↑ +3 vs ayer</div>
+                    <div class="stat-number" id="stat-motos">0</div>
+                    <div class="stat-change">Registros del día</div>
                 </div>
             </div>
-
 
             <div class="stat-card">
                 <div class="stat-icon ingresos">💰</div>
                 <div class="stat-info">
                     <h3>Ingresos Hoy</h3>
-                    <div class="stat-number">$156,000</div>
-                    <div class="stat-change">↑ +12%</div>
+                    <div class="stat-number" id="stat-ingresos">$0</div>
+                    <div class="stat-change">Total recaudado hoy</div>
                 </div>
             </div>
 
@@ -54,8 +53,8 @@
                 <div class="stat-icon activas">📋</div>
                 <div class="stat-info">
                     <h3>Suscripciones Activas</h3>
-                    <div class="stat-number">47</div>
-                    <div class="stat-change negative">↓ -2 esta semana</div>
+                    <div class="stat-number" id="stat-activas">0</div>
+                    <div class="stat-change">Total activas</div>
                 </div>
             </div>
         </div>
@@ -91,86 +90,67 @@
                             <th>Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td><strong>ABC-123</strong></td>
-                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
-                            <td>Horaria</td>
-                            <td>7:30 AM</td>
-                            <td><span class="badge badge-active">Activo</span></td>
-                            <td>$1,000</td>
-                            <td><button class="btn-action btn-view">Ver</button></td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td><strong>XYZ-456</strong></td>
-                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
-                            <td>Día</td>
-                            <td>8:15 AM</td>
-                            <td><span class="badge badge-active">Activo</span></td>
-                            <td>$2,000</td>
-                            <td><button class="btn-action btn-view">Ver</button></td>
-                        </tr>
-                        <tr>
-                            <td>3</td>
-                            <td><strong>DEF-789</strong></td>
-                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
-                            <td>Horaria</td>
-                            <td>9:00 AM</td>
-                            <td><span class="badge badge-pending">Pendiente</span></td>
-                            <td>$2,000</td>
-                            <td><button class="btn-action btn-view">Ver</button></td>
-                        </tr>
-                        <tr>
-                            <td>4</td>
-                            <td><strong>GHI-012</strong></td>
-                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
-                            <td>Semana</td>
-                            <td>9:45 AM</td>
-                            <td><span class="badge badge-active">Activo</span></td>
-                            <td>$50,000</td>
-                            <td><button class="btn-action btn-view">Ver</button></td>
-                        </tr>
-                        <tr>
-                            <td>5</td>
-                            <td><strong>JKL-345</strong></td>
-                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
-                            <td>Día</td>
-                            <td>10:20 AM</td>
-                            <td><span class="badge badge-expired">Salió</span></td>
-                            <td>$2,000</td>
-                            <td><button class="btn-action btn-view">Ver</button></td>
-                        </tr>
-                        <tr>
-                            <td>6</td>
-                            <td><strong>MNO-678</strong></td>
-                            <td><span class="vehicle-type"><span class="icon">🏍️</span> Moto</span></td>
-                            <td>Mes</td>
-                            <td>11:00 AM</td>
-                            <td><span class="badge badge-active">Activo</span></td>
-                            <td>$180,000</td>
-                            <td><button class="btn-action btn-view">Ver</button></td>
-                        </tr>
+                    <tbody id="tabla-registros">
+                        <!-- Se llena dinámicamente desde Supabase -->
                     </tbody>
                 </table>
             </div>
             <div class="quick-stats">
                 <div class="quick-stat">
-                    <div class="qs-number">6</div>
+                    <div class="qs-number" id="qs-registros">0</div>
                     <div class="qs-label">Registros</div>
                 </div>
                 <div class="quick-stat">
-                    <div class="qs-number">5</div>
+                    <div class="qs-number" id="qs-activos">0</div>
                     <div class="qs-label">Activos</div>
                 </div>
                 <div class="quick-stat">
-                    <div class="qs-number">1</div>
+                    <div class="qs-number" id="qs-salieron">0</div>
                     <div class="qs-label">Salieron</div>
                 </div>
                 <div class="quick-stat">
-                    <div class="qs-number">$251,000</div>
+                    <div class="qs-number" id="qs-total">$0</div>
                     <div class="qs-label">Total</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registro Manual (Pagos en Efectivo) -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="section-title">Registrar Pago en Efectivo</h2>
+            </div>
+            <div class="registro-manual-form">
+                <div class="registro-grid">
+                    <div class="form-group">
+                        <label for="reg-placa">Placa del Vehículo</label>
+                        <input type="text" id="reg-placa" placeholder="Ej: ABC-123" maxlength="7">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-nombre">Nombre Completo</label>
+                        <input type="text" id="reg-nombre" placeholder="Ej: Juan Pérez">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-cedula">Número de Cédula</label>
+                        <input type="text" id="reg-cedula" placeholder="Ej: 1234567890">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-telefono">Teléfono</label>
+                        <input type="tel" id="reg-telefono" placeholder="Ej: 3001234567">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-plan">Plan / Tarifa</label>
+                        <select id="reg-plan">
+                            <option value="diario">Diario — $2,000</option>
+                            <option value="semanal">Semanal — $10,000</option>
+                            <option value="mensual">Mensual — $45,000</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-registrar" id="btn-registrar-manual">💵 Registrar Pago en Efectivo</button>
+                <div class="registro-exito hidden" id="registro-exito">
+                    <span class="exito-icon">✅</span>
+                    <span class="exito-msg">Registro guardado correctamente — Ref: <strong id="reg-ref"></strong></span>
                 </div>
             </div>
         </div>
@@ -216,44 +196,44 @@
                 </div>
                 <div class="lookup-result">
                     <!-- Placeholder cuando no hay resultado -->
-                    <div class="result-placeholder" style="display: none;">
+                    <div class="result-placeholder">
                         <div class="icon">🔍</div>
                         <p>Ingresa una placa para consultar<br>la suscripción en la base de datos</p>
                     </div>
 
-                    <!-- Ejemplo de resultado encontrado -->
-                    <div class="result-card">
+                    <!-- Resultado de consulta (oculto hasta que se busque) -->
+                    <div class="result-card" style="display: none;">
                         <div class="result-row">
                             <span class="result-label">Placa</span>
-                            <span class="result-value">ABC-123</span>
+                            <span class="result-value">—</span>
                         </div>
                         <div class="result-row">
                             <span class="result-label">Propietario</span>
-                            <span class="result-value">Juan Pérez</span>
+                            <span class="result-value">—</span>
                         </div>
                         <div class="result-row">
                             <span class="result-label">Vehículo</span>
-                            <span class="result-value">🏍️ Moto</span>
+                            <span class="result-value">—</span>
                         </div>
                         <div class="result-row">
                             <span class="result-label">Suscripción</span>
-                            <span class="result-value">Mensual</span>
+                            <span class="result-value">—</span>
                         </div>
                         <div class="result-row">
                             <span class="result-label">Inicio</span>
-                            <span class="result-value">01/02/2026</span>
+                            <span class="result-value">—</span>
                         </div>
                         <div class="result-row">
                             <span class="result-label">Vencimiento</span>
-                            <span class="result-value">01/03/2026</span>
+                            <span class="result-value">—</span>
                         </div>
                         <div class="result-row">
                             <span class="result-label">Estado</span>
-                            <span class="result-value"><span class="badge badge-active">Activa</span></span>
+                            <span class="result-value">—</span>
                         </div>
                         <div class="result-row">
                             <span class="result-label">Monto Pagado</span>
-                            <span class="result-value" style="color: #E30614; font-weight: 700;">$180,000</span>
+                            <span class="result-value">—</span>
                         </div>
                     </div>
                 </div>
@@ -269,7 +249,7 @@
                 <div class="pie-chart-wrapper">
                     <div class="pie-chart">
                         <div class="pie-center">
-                            <span class="pie-total-number">47</span>
+                            <span class="pie-total-number" id="chart-total">0</span>
                             <span class="pie-total-label">Total</span>
                         </div>
                     </div>
@@ -279,24 +259,24 @@
                         <span class="legend-color diario"></span>
                         <div class="legend-info">
                             <span class="legend-label">Diario</span>
-                            <span class="legend-value">12 usuarios</span>
-                            <span class="legend-percent">25.5%</span>
+                            <span class="legend-value" id="chart-diario">0 usuarios</span>
+                            <span class="legend-percent" id="chart-diario-pct">0%</span>
                         </div>
                     </div>
                     <div class="legend-item">
                         <span class="legend-color semanal"></span>
                         <div class="legend-info">
                             <span class="legend-label">Semanal</span>
-                            <span class="legend-value">20 usuarios</span>
-                            <span class="legend-percent">42.6%</span>
+                            <span class="legend-value" id="chart-semanal">0 usuarios</span>
+                            <span class="legend-percent" id="chart-semanal-pct">0%</span>
                         </div>
                     </div>
                     <div class="legend-item">
                         <span class="legend-color mensual"></span>
                         <div class="legend-info">
                             <span class="legend-label">Mensual</span>
-                            <span class="legend-value">15 usuarios</span>
-                            <span class="legend-percent">31.9%</span>
+                            <span class="legend-value" id="chart-mensual">0 usuarios</span>
+                            <span class="legend-percent" id="chart-mensual-pct">0%</span>
                         </div>
                     </div>
                 </div>
@@ -308,6 +288,11 @@
     <footer>
         <p>&copy; 2026 Parqueadero Unimeta — Panel Administrativo. Todos los derechos reservados.</p>
     </footer>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <script src="admin.js"></script>
 </body>
 
 </html>

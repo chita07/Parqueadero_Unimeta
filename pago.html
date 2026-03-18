@@ -191,86 +191,11 @@
         <p>&copy; 2026 Parqueadero Unimeta. Todos los derechos reservados.</p>
     </footer>
 
-    <script>
-        let planSeleccionado = null;
-        let precioSeleccionado = 0;
-        let nombrePlan = '';
 
-        function seleccionarPlan(plan, precio, nombre) {
-            planSeleccionado = plan;
-            precioSeleccionado = precio;
-            nombrePlan = nombre;
-
-            // Highlight selected card
-            document.querySelectorAll('.plan-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            document.querySelector(`[data-plan="${plan}"]`).classList.add('selected');
-
-            // Update resumen
-            document.getElementById('resumen-tipo').textContent = nombre;
-            document.getElementById('resumen-servicio').textContent = 'Moto - Tarifa ' + nombre;
-            document.getElementById('resumen-total').textContent = '$' + precio.toLocaleString('es-CO');
-
-            // Show step 2
-            document.getElementById('step-pago').classList.remove('hidden');
-            document.getElementById('step-pago').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        // Update placa in resumen in real-time
-        document.getElementById('placa').addEventListener('input', function () {
-            const valor = this.value.toUpperCase() || '—';
-            document.getElementById('resumen-placa').textContent = valor;
-            this.value = this.value.toUpperCase();
-        });
-
-        function confirmarPago() {
-            const placa = document.getElementById('placa').value.trim();
-            const nombre = document.getElementById('nombre').value.trim();
-            const cedula = document.getElementById('cedula').value.trim();
-            const metodo = document.querySelector('input[name="metodo"]:checked');
-
-            if (!placa) {
-                alert('Por favor ingresa la placa del vehículo.');
-                return;
-            }
-            if (!nombre) {
-                alert('Por favor ingresa tu nombre completo.');
-                return;
-            }
-            if (!cedula) {
-                alert('Por favor ingresa tu número de cédula.');
-                return;
-            }
-            if (!metodo) {
-                alert('Por favor selecciona un método de pago.');
-                return;
-            }
-
-            const metodoNombres = { nequi: 'Nequi', pse: 'PSE', tarjeta: 'Tarjeta de Crédito/Débito' };
-            const ref = 'PQ-' + Date.now().toString().slice(-8);
-
-            document.getElementById('conf-plan').textContent = nombrePlan;
-            document.getElementById('conf-placa').textContent = placa.toUpperCase();
-            document.getElementById('conf-nombre').textContent = nombre;
-            document.getElementById('conf-total').textContent = '$' + precioSeleccionado.toLocaleString('es-CO');
-            document.getElementById('conf-metodo').textContent = metodoNombres[metodo.value];
-            document.getElementById('conf-ref').textContent = ref;
-
-            document.getElementById('step-servicio').classList.add('hidden');
-            document.getElementById('step-pago').classList.add('hidden');
-            document.getElementById('step-confirmacion').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function cambiarPlan() {
-            document.getElementById('step-pago').classList.add('hidden');
-            document.querySelectorAll('.plan-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    </script>
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <script src="pago.js"></script>
 </body>
 
 </html>
