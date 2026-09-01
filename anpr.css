@@ -824,16 +824,61 @@ footer {
     margin-top: 30px;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+    html, body {
+        overflow-x: hidden;
+        width: 100%;
+        max-width: 100vw;
+    }
+
+    .header-content {
+        padding: 0 12px;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .logo {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .logo-img {
+        height: 38px;
+    }
+
+    .logo-text {
+        font-size: 14px;
+    }
+
+    nav {
+        justify-content: center;
+        width: 100%;
+        gap: 6px;
+    }
+
+    .btn-nav {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    .anpr-container {
+        padding: 16px 12px;
+    }
+
     .modo-buttons {
         flex-direction: column;
     }
+
     .btn-modo {
         max-width: 100%;
     }
+
     .colombia-plate {
         width: 230px;
     }
+
     .plate-code {
         font-size: 28px;
     }

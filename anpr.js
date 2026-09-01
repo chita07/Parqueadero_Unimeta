@@ -373,57 +373,81 @@ function extraerPlacaColombiana(textoOCR) {
              .replace(/MEDELLIN/g, '')
              .replace(/CALI/g, '');
 
-    // 1. Extraer tokens alfanuméricos agrupados (ej: "XYQ" "73" o "XYQ-73" o "XYQ73")
-    const tokens = raw.match(/[A-Z0-9]+/g) || [];
-    const concatenado = tokens.join('');
+    // 1. Extraer tokens alfanuméricos
+    const tokens = (raw.match(/[A-Z0-9]+/g) || []).filter(t => t.length > 0);
+    const candidatos = [];
 
     // Formatos válidos:
-    // Moto clásica: 3 letras + 2 números (ej: XYQ73, XYO73)
-    const regexMotoClasica = /[A-Z]{3}[0-9]{2}/;
-    // Moto nueva: 3 letras + 2 números + 1 letra (ej: XYQ73F, ABC12D)
-    const regexMotoNueva = /[A-Z]{3}[0-9]{2}[A-Z]/;
-    // Carro estándar: 3 letras + 3 números (ej: CCC890, ABC123)
-    const regexEstandar = /[A-Z]{3}[0-9]{3}/;
+    // Moto clásica: 3 letras + 2 números (ej: XYQ73)
+    const regexMotoClasica = /^[A-Z]{3}[0-9]{2}$/;
+    // Moto nueva: 3 letras + 2 números + 1 letra (ej: XYQ73F, WUF62C)
+    const regexMotoNueva = /^[A-Z]{3}[0-9]{2}[A-Z]$/;
+    // Carro estándar: 3 letras + 3 números (ej: CCC890)
+    const regexEstandar = /^[A-Z]{3}[0-9]{3}$/;
 
-    // Verificar match directo en concatenado
-    let match = concatenado.match(regexMotoNueva) || concatenado.match(regexEstandar) || concatenado.match(regexMotoClasica);
-    if (match) return match[0];
+    // Función auxiliar para normalizar y corregir un candidato de 5 o 6 caracteres
+    function corregirYValidar(str) {
+        if (!str || str.length < 5 || str.length > 6) return null;
+        const len = str.length;
+        let cand = '';
+        for (let pos = 0; pos < len; pos++) {
+            const c = str[pos];
+            if (pos < 3) {
+                // Primeros 3 caracteres deben ser letras
+                const lMap = { '0': 'O', '1': 'I', '5': 'S', '8': 'B', '2': 'Z', '6': 'G', '7': 'T', '4': 'A' };
+                cand += lMap[c] || c;
+            } else if (pos === 5 && len === 6 && /[A-Z]/.test(c)) {
+                // Posición 5 en moto nueva (6 chars) es letra
+                cand += c;
+            } else {
+                // Posiciones numéricas
+                const nMap = { 'O': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'S': '5', 'B': '8', 'Z': '2', 'G': '6', 'T': '7' };
+                cand += nMap[c] || c;
+            }
+        }
 
-    // Verificar si dos tokens adyacentes forman la placa (ej: ["XYQ", "73"] o ["XYO", "73"])
-    for (let i = 0; i < tokens.length; i++) {
-        if (tokens[i].length === 3 && tokens[i + 1] && (tokens[i + 1].length === 2 || tokens[i + 1].length === 3)) {
-            const candidato = tokens[i] + tokens[i + 1];
-            match = candidato.match(regexMotoNueva) || candidato.match(regexEstandar) || candidato.match(regexMotoClasica);
-            if (match) return match[0];
+        if (regexMotoNueva.test(cand) || regexEstandar.test(cand) || (len === 5 && regexMotoClasica.test(cand))) {
+            return cand;
+        }
+        return null;
+    }
+
+    // A) Probar tokens individuales directos (ej: "XYQ73", "WUF62C")
+    for (let t of tokens) {
+        const val = corregirYValidar(t);
+        if (val) candidatos.push({ placa: val, score: 100 });
+    }
+
+    // B) Probar combinaciones de tokens adyacentes (ej: "XYQ" + "73" -> "XYQ73", "WUF" + "62C" -> "WUF62C", "KY" + "QT3" -> "XYQ73")
+    for (let i = 0; i < tokens.length - 1; i++) {
+        const combo = tokens[i] + tokens[i + 1];
+        const val = corregirYValidar(combo);
+        if (val) candidatos.push({ placa: val, score: 90 });
+    }
+
+    // C) Probar combinaciones de 3 tokens (ej: "WUF" + "62" + "C")
+    for (let i = 0; i < tokens.length - 2; i++) {
+        const combo3 = tokens[i] + tokens[i + 1] + tokens[i + 2];
+        const val = corregirYValidar(combo3);
+        if (val) candidatos.push({ placa: val, score: 85 });
+    }
+
+    // D) Si aún no hay match, buscar en texto concatenado
+    if (candidatos.length === 0) {
+        const concatenado = tokens.join('');
+        for (let len of [6, 5]) {
+            for (let s = 0; s <= concatenado.length - len; s++) {
+                const sub = concatenado.substr(s, len);
+                const val = corregirYValidar(sub);
+                if (val) candidatos.push({ placa: val, score: 50 });
+            }
         }
     }
 
-    // 2. Corrección inteligente de caracteres confusos (O<->0, I<->1, S<->5, B<->8, Z<->2)
-    if (concatenado.length >= 5) {
-        for (let len of [6, 5]) {
-            for (let start = 0; start <= concatenado.length - len; start++) {
-                const sub = concatenado.substr(start, len);
-                let cand = '';
-                for (let pos = 0; pos < len; pos++) {
-                    const c = sub[pos];
-                    if (pos < 3) {
-                        // Posición 0, 1, 2: Letras
-                        const lMap = { '0': 'O', '1': 'I', '5': 'S', '8': 'B', '2': 'Z', '6': 'G' };
-                        cand += lMap[c] || c;
-                    } else if (pos === 5 && len === 6 && /[A-Z]/.test(c)) {
-                        // Posición 5 en moto 6 chars: Letra
-                        cand += c;
-                    } else {
-                        // Posiciones numéricas: Números
-                        const nMap = { 'O': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'S': '5', 'B': '8', 'Z': '2', 'G': '6' };
-                        cand += nMap[c] || c;
-                    }
-                }
-
-                match = cand.match(regexMotoNueva) || cand.match(regexEstandar) || (len === 5 && cand.match(regexMotoClasica));
-                if (match) return match[0];
-            }
-        }
+    if (candidatos.length > 0) {
+        // Ordenar por mayor score y retornar la mejor opción
+        candidatos.sort((a, b) => b.score - a.score);
+        return candidatos[0].placa;
     }
 
     return null;
