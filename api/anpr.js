@@ -150,16 +150,16 @@ export default async function handler(req, res) {
 
         const groqKey = getEnv('GROQ_API_KEY');
 
-        const prompt = `Eres un sistema OCR especializado en matrículas colombianas.
-Analiza exclusivamente la placa vehicular visible en la imagen.
-No leas textos como COLOMBIA, nombres de ciudades, marcas, stickers ni elementos del vehículo.
-Identifica únicamente la secuencia principal de caracteres de la matrícula.
-Formatos esperados:
-- 3 letras + 2 números (ej: XYQ73)
-- 3 letras + 2 números + 1 letra (ej: WUF62C, MKH87E)
-- 3 letras + 3 números (ej: CCC890)
-Devuelve SOLO la secuencia de la placa (ej: WUF62C) sin espacios ni símbolos.
-Si no puedes identificarla, responde: NO_DETECTADA`;
+        const prompt = `Analiza la imagen adjunta e identifica exclusivamente los caracteres de la matrícula vehicular de Colombia.
+Formatos válidos colombianos:
+- Motos: 3 letras y 2 números (ej: XYQ73) O 3 letras, 2 números y 1 letra (ej: WUF62C, MKH87E).
+- Carros: 3 letras y 3 números (ej: CCC890).
+
+Devuelve ÚNICAMENTE un objeto JSON en este formato exacto:
+{"placa": "WUF62C"}
+
+Si la matrícula no es visible ni identificable, responde:
+{"placa": "NO_DETECTADA"}`;
 
         let ultimoErrorGroq = '';
 
@@ -168,10 +168,9 @@ Si no puedes identificarla, responde: NO_DETECTADA`;
             try {
                 const groqModels = [
                     'qwen/qwen3.6-27b',
-                    'llama-3.2-11b-vision-preview',
-                    'llama-3.2-90b-vision-preview',
                     'qwen/qwen3.8-27b',
-                    'meta-llama/llama-4-scout-17b-vision'
+                    'llama-3.2-11b-vision-preview',
+                    'llama-3.2-90b-vision-preview'
                 ];
                 const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
@@ -185,10 +184,11 @@ Si no puedes identificarla, responde: NO_DETECTADA`;
                             },
                             body: JSON.stringify({
                                 model: model,
+                                response_format: { type: 'json_object' },
                                 messages: [
                                     {
                                         role: 'system',
-                                        content: 'Eres un sistema OCR de placas vehiculares de Colombia. Responde directamente con el código de la placa (ej: WUF62C o CCC890). No incluyas explicaciones ni razonamiento.'
+                                        content: 'Eres un sistema OCR de precisión para placas vehiculares de Colombia. Devuelve exclusivamente un JSON con la propiedad "placa".'
                                     },
                                     {
                                         role: 'user',
@@ -199,7 +199,7 @@ Si no puedes identificarla, responde: NO_DETECTADA`;
                                     }
                                 ],
                                 temperature: 0.05,
-                                max_tokens: 150
+                                max_tokens: 500
                             })
                         });
 
@@ -254,32 +254,61 @@ Si no puedes identificarla, responde: NO_DETECTADA`;
 function sanitizarPlaca(raw) {
     if (!raw) return { placa: '', esValida: false };
 
-    // 1. Eliminar etiquetas de razonamiento <think>...</think> de modelos Qwen/DeepSeek
-    let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    // 1. Intentar parsear directamente JSON {"placa": "..."}
+    try {
+        const jsonMatch = raw.match(/\{[\s\S]*?\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.placa && parsed.placa !== 'NO_DETECTADA') {
+                const clean = parsed.placa.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (/^[A-Z]{3}[0-9]{2}[A-Z]?$/.test(clean) || /^[A-Z]{3}[0-9]{3}$/.test(clean)) {
+                    return { placa: clean, esValida: true };
+                }
+            }
+        }
+    } catch (e) { }
 
-    // 2. Extraer primero con expresiones regulares tolerantes a guiones/espacios
-    // Formato Moto Nueva: 3 Letras + 2 Números + 1 Letra (ej: WUF-62C -> WUF62C)
+    // 2. Extraer texto fuera del bloque <think> (soportando cierre </think> o corte abrupto)
+    let text = raw.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim();
+
+    // Si todo el texto estaba dentro del <think>, extraer partes identificadas por Qwen
+    if (!text && raw.includes('<think>')) {
+        const seqMatch = raw.match(/sequence is ["']?([A-Z]{3}[-\s]?[0-9]{2,3}[A-Z]?)["']?/i);
+        if (seqMatch) {
+            const clean = seqMatch[1].toUpperCase().replace(/[^A-Z0-9]/g, '');
+            return { placa: clean, esValida: true };
+        }
+        const partL = raw.match(/letters?: ["']?([A-Z]{3})["']?/i);
+        const partN = raw.match(/(?:numbers?|digits?)(?: and a letter)?: ["']?([0-9]{2,3}[A-Z]?)["']?/i);
+        if (partL && partN) {
+            const placa = `${partL[1]}${partN[1]}`.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (/^[A-Z]{3}[0-9]{2}[A-Z]?$/.test(placa) || /^[A-Z]{3}[0-9]{3}$/.test(placa)) {
+                return { placa, esValida: true };
+            }
+        }
+        text = raw;
+    }
+
+    // 3. Formatos válidos con regex en el texto limpio (evitando palabras comunes como 'letter')
     const matchMotoNueva = text.match(/\b([A-Z]{3})[-\s]?([0-9]{2})[-\s]?([A-Z])\b/i);
-    if (matchMotoNueva) {
+    if (matchMotoNueva && !['LET', 'THE', 'AND', 'NUM'].includes(matchMotoNueva[1].toUpperCase())) {
         const placa = `${matchMotoNueva[1]}${matchMotoNueva[2]}${matchMotoNueva[3]}`.toUpperCase();
         return { placa, esValida: true };
     }
 
-    // Formato Carro Estándar: 3 Letras + 3 Números (ej: CCC-890 -> CCC890)
     const matchCarro = text.match(/\b([A-Z]{3})[-\s]?([0-9]{3})\b/i);
-    if (matchCarro) {
+    if (matchCarro && !['LET', 'THE', 'AND', 'NUM'].includes(matchCarro[1].toUpperCase())) {
         const placa = `${matchCarro[1]}${matchCarro[2]}`.toUpperCase();
         return { placa, esValida: true };
     }
 
-    // Formato Moto Clásica: 3 Letras + 2 Números (ej: XYQ-73 -> XYQ73)
     const matchMotoClasica = text.match(/\b([A-Z]{3})[-\s]?([0-9]{2})\b/i);
-    if (matchMotoClasica) {
+    if (matchMotoClasica && !['LET', 'THE', 'AND', 'NUM'].includes(matchMotoClasica[1].toUpperCase())) {
         const placa = `${matchMotoClasica[1]}${matchMotoClasica[2]}`.toUpperCase();
         return { placa, esValida: true };
     }
 
-    // 3. Limpieza profunda estándar
+    // 4. Limpieza profunda estándar
     let clean = text.toUpperCase()
         .replace(/```[a-z]*\n?/gi, '')
         .replace(/`/g, '')
