@@ -21,8 +21,23 @@ export default async function handler(req, res) {
         return;
     }
 
+    // Helper para buscar variables de entorno tolerando mayúsculas/minúsculas o espacios
+    const getEnv = (name) => {
+        const direct = process.env[name];
+        if (direct && direct.trim()) return direct.trim();
+        for (const [k, v] of Object.entries(process.env)) {
+            if (k.trim().toUpperCase() === name.toUpperCase() && v && v.trim()) {
+                return v.trim();
+            }
+            if (k.trim().toUpperCase().includes(name.toUpperCase()) && v && v.trim()) {
+                return v.trim();
+            }
+        }
+        return '';
+    };
+
     if (req.method === 'GET') {
-        const geminiKey = process.env.GEMINI_API_KEY || '';
+        const geminiKey = getEnv('GEMINI_API_KEY');
         const keyPrefix = geminiKey ? geminiKey.slice(0, 8) + '...' + geminiKey.slice(-4) : 'NO_CONFIGURADA';
         
         let testStatus = 'Sin probar';
@@ -63,7 +78,7 @@ export default async function handler(req, res) {
             }
         }
 
-        const groqKey = process.env.GROQ_API_KEY || '';
+        const groqKey = getEnv('GROQ_API_KEY');
         let groqStatus = 'No configurado';
         let groqError = null;
 
@@ -94,6 +109,10 @@ export default async function handler(req, res) {
             }
         }
 
+        const varsDisponibles = Object.keys(process.env).filter(
+            k => !k.startsWith('npm_') && !k.startsWith('VERCEL_') && !k.startsWith('AWS_') && !k.startsWith('PATH') && !k.startsWith('NODE_')
+        );
+
         return res.status(200).json({
             endpoint: '/api/anpr',
             gemini: {
@@ -107,7 +126,8 @@ export default async function handler(req, res) {
                 preview: groqKey ? groqKey.slice(0, 8) + '...' : 'NO_CONFIGURADA',
                 estado: groqStatus,
                 detalleError: groqError
-            }
+            },
+            variablesEncontradasEnVercel: varsDisponibles
         });
     }
 
@@ -140,9 +160,9 @@ export default async function handler(req, res) {
             base64Data = parts[1].replace(/[\r\n\s]+/g, '');
         }
 
-        const geminiKey = process.env.GEMINI_API_KEY;
-        const groqKey = process.env.GROQ_API_KEY;
-        const openRouterKey = process.env.OPENROUTER_API_KEY;
+        const geminiKey = getEnv('GEMINI_API_KEY');
+        const groqKey = getEnv('GROQ_API_KEY');
+        const openRouterKey = getEnv('OPENROUTER_API_KEY');
 
         const prompt = `Eres un sistema ANPR de alta precisión especializado en matrículas vehiculares de Colombia.
 Formatos válidos de placas colombianas:
