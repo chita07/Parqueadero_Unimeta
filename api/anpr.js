@@ -38,8 +38,8 @@ export default async function handler(req, res) {
                     headers['Authorization'] = `Bearer ${geminiKey}`;
                 }
 
-                const urlNoKey = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
-                const urlWithKey = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+                const urlNoKey = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`;
+                const urlWithKey = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${geminiKey}`;
                 const testUrl = geminiKey.startsWith('AQ.') ? urlNoKey : urlWithKey;
 
                 const tRes = await fetch(testUrl, {
@@ -123,7 +123,7 @@ Instrucciones estrictas:
         if (geminiKey) {
             let ultimoErrorGemini = '';
             try {
-                const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+                const models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
                 let plateResult = null;
                 let usedModel = null;
 
