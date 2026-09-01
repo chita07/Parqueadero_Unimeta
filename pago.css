@@ -597,3 +597,200 @@ footer p {
         gap: 8px;
     }
 }
+
+/* ===== Jornada Selector ===== */
+.jornada-selector {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.jornada-option {
+    cursor: pointer;
+}
+
+.jornada-option input[type="radio"] {
+    display: none;
+}
+
+.jornada-card {
+    border: 2px solid #eee;
+    border-radius: 10px;
+    padding: 14px 10px;
+    text-align: center;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: #fafafa;
+}
+
+.jornada-card:hover {
+    border-color: #ccc;
+}
+
+.jornada-option input[type="radio"]:checked + .jornada-card {
+    border-color: #E30614;
+    background: rgba(227, 6, 20, 0.04);
+    box-shadow: 0 0 0 3px rgba(227, 6, 20, 0.08);
+}
+
+.jornada-icon {
+    font-size: 26px;
+}
+
+.jornada-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #333;
+}
+
+.jornada-hora {
+    font-size: 11px;
+    color: #888;
+    font-weight: 500;
+}
+
+.jornada-info {
+    font-size: 12px;
+    color: #666;
+    background: rgba(255, 205, 28, 0.15);
+    border-left: 3px solid #FFCD1C;
+    padding: 10px 12px;
+    border-radius: 6px;
+    line-height: 1.5;
+}
+
+/* ===== Check-in Message en Confirmación ===== */
+.confirmacion-checkin-msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: linear-gradient(135deg, #fffbe6, #fff5f5);
+    border: 1.5px solid #FFCD1C;
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 16px;
+    text-align: left;
+}
+
+.checkin-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.confirmacion-checkin-msg p {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+}
+
+.confirmacion-checkin-msg a {
+    color: #E30614;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.confirmacion-checkin-msg a:hover {
+    text-decoration: underline;
+}
+
+/* ===== Custom UI Dialog (Alert / Confirm) ===== */
+.custom-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(3px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+.custom-dialog-overlay.hidden {
+    display: none;
+}
+
+.custom-dialog {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    text-align: center;
+    max-width: 380px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    animation: scaleIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.custom-dialog-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.custom-dialog-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 12px;
+}
+
+.custom-dialog-msg {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.custom-dialog-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.custom-dialog-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    border: none;
+    flex: 1;
+}
+
+.custom-dialog-btn-primary {
+    background: linear-gradient(135deg, #E30614, #b80510);
+    color: white;
+}
+
+.custom-dialog-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(227, 6, 20, 0.3);
+}
+
+.custom-dialog-btn-secondary {
+    background: #f0f0f0;
+    color: #555;
+}
+
+.custom-dialog-btn-secondary:hover {
+    background: #e4e4e4;
+}

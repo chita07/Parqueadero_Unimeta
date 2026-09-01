@@ -18,7 +18,7 @@
             </div>
             <div class="header-nav">
                 <span class="admin-badge">👤 Administrador</span>
-                <button class="btn-logout">Cerrar Sesión</button>
+                <button class="btn-logout" onclick="window.location.href='index.html'">Cerrar Sesión</button>
             </div>
         </div>
     </header>
@@ -55,6 +55,15 @@
                     <h3>Suscripciones Activas</h3>
                     <div class="stat-number" id="stat-activas">0</div>
                     <div class="stat-change">Total activas</div>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background-color:rgba(46,184,92,0.1);">🅿️</div>
+                <div class="stat-info">
+                    <h3>Espacios Disponibles</h3>
+                    <div class="stat-number" id="stat-espacios">--/33</div>
+                    <div class="stat-change">Disponibilidad actual</div>
                 </div>
             </div>
         </div>
@@ -144,6 +153,13 @@
                             <option value="diario">Diario — $2,000</option>
                             <option value="semanal">Semanal — $10,000</option>
                             <option value="mensual">Mensual — $45,000</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-jornada">Jornada</label>
+                        <select id="reg-jornada">
+                            <option value="diurna">☀️ Diurna (6 AM – 1 PM)</option>
+                            <option value="nocturna">🌙 Nocturna (6 PM – 10 PM)</option>
                         </select>
                     </div>
                 </div>
@@ -279,6 +295,120 @@
                             <span class="legend-percent" id="chart-mensual-pct">0%</span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+        <!-- Mapa del Parqueadero -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="section-title">📍 Mapa del Parqueadero</h2>
+                <div class="mapa-admin-stats">
+                    <span class="admin-stat-badge libre-badge"><span class="dot dot-libre"></span> Libres: <strong id="admin-libres">0</strong></span>
+                    <span class="admin-stat-badge ocupado-badge"><span class="dot dot-ocupado"></span> Ocupados: <strong id="admin-ocupados">0</strong></span>
+                </div>
+            </div>
+            <div class="mapa-admin-wrapper">
+                <div class="admin-leyenda">
+                    <div class="leyenda-item"><span class="leyenda-dot" style="background:#2eb85c;"></span> Libre</div>
+                    <div class="leyenda-item"><span class="leyenda-dot" style="background:#E30614;"></span> Ocupado</div>
+                </div>
+                <div class="admin-parqueadero" id="admin-parqueadero">
+                    <div class="admin-zona admin-zona-sup-izq">
+                        <div class="admin-espacio" data-num="1">1</div>
+                        <div class="admin-espacio" data-num="2">2</div>
+                        <div class="admin-espacio" data-num="3">3</div>
+                        <div class="admin-espacio" data-num="4">4</div>
+                    </div>
+                    <div class="admin-zona admin-zona-sup-der">
+                        <div class="admin-espacio" data-num="5">5</div>
+                        <div class="admin-espacio" data-num="6">6</div>
+                        <div class="admin-espacio" data-num="7">7</div>
+                        <div class="admin-espacio" data-num="8">8</div>
+                        <div class="admin-espacio" data-num="9">9</div>
+                    </div>
+                    <div class="admin-zona admin-zona-der">
+                        <div class="admin-espacio" data-num="10">10</div>
+                        <div class="admin-espacio" data-num="11">11</div>
+                        <div class="admin-espacio" data-num="12">12</div>
+                        <div class="admin-espacio" data-num="13">13</div>
+                        <div class="admin-espacio" data-num="14">14</div>
+                        <div class="admin-espacio" data-num="15">15</div>
+                        <div class="admin-espacio" data-num="16">16</div>
+                        <div class="admin-espacio" data-num="17">17</div>
+                        <div class="admin-espacio" data-num="18">18</div>
+                        <div class="admin-espacio" data-num="19">19</div>
+                        <div class="admin-espacio" data-num="20">20</div>
+                        <div class="admin-espacio" data-num="21">21</div>
+                        <div class="admin-espacio" data-num="22">22</div>
+                    </div>
+                    <div class="admin-zona admin-zona-izq">
+                        <div class="admin-espacio" data-num="23">23</div>
+                        <div class="admin-espacio" data-num="24">24</div>
+                        <div class="admin-espacio" data-num="25">25</div>
+                    </div>
+                    <div class="admin-flecha admin-flecha-sup">←</div>
+                    <div class="admin-ascensor">🛗 Ascensor</div>
+                    <div class="admin-flecha admin-flecha-centro">↑</div>
+                    <div class="admin-zona admin-zona-inf-izq">
+                        <div class="admin-espacio" data-num="26">26</div>
+                        <div class="admin-espacio" data-num="27">27</div>
+                        <div class="admin-espacio" data-num="28">28</div>
+                        <div class="admin-espacio" data-num="29">29</div>
+                        <div class="admin-espacio" data-num="30">30</div>
+                    </div>
+                    <div class="admin-flecha admin-flecha-inf">→</div>
+                    <div class="admin-zona admin-zona-inf-der">
+                        <div class="admin-espacio" data-num="31">31</div>
+                        <div class="admin-espacio" data-num="32">32</div>
+                        <div class="admin-espacio" data-num="33">33</div>
+                    </div>
+                    <div class="admin-columna"></div>
+                    <div class="admin-entrada">↑ ENTRADA</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal detalle de espacio -->
+        <div class="modal-overlay hidden" id="modal-espacio-overlay">
+            <div class="modal-espacio" id="modal-espacio">
+                <div class="modal-header-esp">
+                    <h3>Espacio #<span id="modal-num">--</span></h3>
+                    <button class="modal-cerrar" onclick="cerrarModal()">✕</button>
+                </div>
+                <div class="modal-body-esp">
+                    <div class="modal-row"><span>Estado</span><strong id="modal-estado">—</strong></div>
+                    <div class="modal-row"><span>Usuario</span><strong id="modal-usuario">—</strong></div>
+                    <div class="modal-row"><span>Placa</span><strong id="modal-placa">—</strong></div>
+                    <div class="modal-row"><span>Cédula</span><strong id="modal-cedula">—</strong></div>
+                    <div class="modal-row"><span>Teléfono</span><strong id="modal-telefono">—</strong></div>
+                    <div class="modal-row"><span>Plan</span><strong id="modal-plan-tipo">—</strong></div>
+                    <div class="modal-row"><span>Vencimiento</span><strong id="modal-vence">—</strong></div>
+                    <div class="modal-row"><span>Referencia</span><strong id="modal-ref">—</strong></div>
+                </div>
+
+                <!-- Sección de asignación (solo para espacios libres) -->
+                <div class="modal-asignar hidden" id="modal-asignar">
+                    <div class="modal-asignar-title">
+                        <span>👥</span> Asignar usuario a este espacio
+                    </div>
+                    <div class="modal-asignar-info">Suscriptores activos sin check-in hoy:</div>
+                    <div class="modal-usuarios-lista" id="modal-usuarios-lista">
+                        <div class="modal-cargando">Cargando usuarios...</div>
+                    </div>
+                </div>
+
+                <button class="btn-liberar hidden" id="btn-liberar" onclick="liberarEspacio()">🔓 Liberar Espacio</button>
+            </div>
+        </div>
+
+        <!-- Custom UI Dialog -->
+        <div class="custom-dialog-overlay hidden" id="custom-dialog-overlay">
+            <div class="custom-dialog" id="custom-dialog-card">
+                <div class="custom-dialog-icon" id="custom-dialog-icon">❓</div>
+                <h3 class="custom-dialog-title" id="custom-dialog-title">Atención</h3>
+                <p class="custom-dialog-msg" id="custom-dialog-msg">Mensaje</p>
+                <div class="custom-dialog-actions" id="custom-dialog-actions">
+                    <!-- Los botones se insertan dinámicamente -->
                 </div>
             </div>
         </div>

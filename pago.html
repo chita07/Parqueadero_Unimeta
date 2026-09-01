@@ -82,6 +82,28 @@
                         <label for="telefono">Teléfono</label>
                         <input type="tel" id="telefono" placeholder="Ej: 3001234567">
                     </div>
+                    <div class="form-group">
+                        <label>Jornada Principal</label>
+                        <div class="jornada-selector">
+                            <label class="jornada-option" id="jornada-diurna-label">
+                                <input type="radio" name="jornada" value="diurna" checked>
+                                <div class="jornada-card">
+                                    <span class="jornada-icon">☀️</span>
+                                    <span class="jornada-name">Diurna</span>
+                                    <span class="jornada-hora">6 AM – 1 PM</span>
+                                </div>
+                            </label>
+                            <label class="jornada-option" id="jornada-nocturna-label">
+                                <input type="radio" name="jornada" value="nocturna">
+                                <div class="jornada-card">
+                                    <span class="jornada-icon">🌙</span>
+                                    <span class="jornada-name">Nocturna</span>
+                                    <span class="jornada-hora">6 PM – 10 PM</span>
+                                </div>
+                            </label>
+                        </div>
+                        <p class="jornada-info">💡 Esta es tu jornada habitual. Al llegar al parqueadero, usa el botón <strong>"Ya llegué"</strong> en el Mapa para que se te asigne un espacio disponible.</p>
+                    </div>
                 </div>
 
                 <!-- Resumen del Pago -->
@@ -179,11 +201,32 @@
                         <span class="confirmacion-label">Referencia</span>
                         <span class="confirmacion-value" id="conf-ref">—</span>
                     </div>
+                    <div class="confirmacion-row">
+                        <span class="confirmacion-label">🕐 Jornada</span>
+                        <span class="confirmacion-value" id="conf-jornada" style="font-weight:700;color:#E30614;">—</span>
+                    </div>
+                    <div class="confirmacion-checkin-msg" id="conf-checkin-msg">
+                        <span class="checkin-icon">📍</span>
+                        <p>Tu espacio se asigna <strong>al llegar</strong>. Abre el <a href="mapa.html">Mapa del Parqueadero</a> y toca <strong>"Ya llegué"</strong> para ver tu espacio disponible.</p>
+                    </div>
                 </div>
 
+                <button class="btn-ver-mapa" onclick="verMiEspacio()" style="width:100%;background:linear-gradient(135deg,#FFCD1C,#FFB300);color:#333;border:none;padding:14px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:all 0.2s;">📍 Ver mi espacio en el mapa</button>
                 <button class="btn-volver" onclick="location.href='index.html'">Volver al Inicio</button>
             </div>
         </section>
+
+        <!-- Custom UI Dialog -->
+        <div class="custom-dialog-overlay hidden" id="custom-dialog-overlay">
+            <div class="custom-dialog" id="custom-dialog-card">
+                <div class="custom-dialog-icon" id="custom-dialog-icon">❓</div>
+                <h3 class="custom-dialog-title" id="custom-dialog-title">Atención</h3>
+                <p class="custom-dialog-msg" id="custom-dialog-msg">Mensaje</p>
+                <div class="custom-dialog-actions" id="custom-dialog-actions">
+                    <!-- Los botones se insertan dinámicamente -->
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Footer -->

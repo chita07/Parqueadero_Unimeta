@@ -16,6 +16,7 @@
                 <img src="imagenes/logo_unimeta.png" alt="Logo Unimeta" class="logo-img">
             </div>
             <nav>
+                <a href="mapa.html" class="btn-admin" style="background-color:white;color:#E30614;">📍 Ver Mapa</a>
                 <a href="admin.html" class="btn-admin">Administrador</a>
             </nav>
         </div>
@@ -28,8 +29,8 @@
                 <h1>Bienvenido al Sistema de<br>Parqueadero UNIMETA</h1>
                 <p>Gestiona tu parqueadero de forma rápida y segura.</p>
                 <div class="hero-buttons">
-                    <button class="btn-primary">Iniciar Sesión</button>
-                    <button class="btn-secondary">Registrarse</button>
+                    <button class="btn-primary" id="btn-login-hero">Iniciar Sesión</button>
+                    <button class="btn-secondary" id="btn-register-hero">Registrarse</button>
                 </div>
             </div>
             <div class="hero-image">
@@ -97,9 +98,9 @@
 
                 <div class="paso-card">
                     <div class="paso-numero">3</div>
-                    <h3>Paga y accede</h3>
-                    <p>Paga en línea y accede al parqueadero</p>
-                    <div class="paso-imagen">💳✅</div>
+                    <h3>Paga y ve tu espacio</h3>
+                    <p>Paga en línea y visualiza tu espacio asignado en el mapa</p>
+                    <div class="paso-imagen">💳📍</div>
                 </div>
             </div>
         </section>
@@ -111,6 +112,57 @@
     </footer>
 
 
+    <!-- Modal Login/Registro (Simulador) -->
+    <div id="auth-modal" class="auth-modal">
+        <div class="auth-modal-content">
+            <span class="close-modal" id="close-auth-modal">&times;</span>
+            
+            <div id="login-form-container" class="auth-form-container active">
+                <h2>Iniciar Sesión</h2>
+                <p>Ingresa a tu cuenta para gestionar tu parqueadero.</p>
+                <form onsubmit="event.preventDefault(); alert('Simulación: Iniciando sesión... Funcionalidad no conectada al backend.');">
+                    <div class="input-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" placeholder="ejemplo@correo.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Contraseña</label>
+                        <input type="password" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn-primary auth-submit">Ingresar</button>
+                </form>
+                <div class="auth-switch">
+                    ¿No tienes cuenta? <span id="switch-to-register">Regístrate aquí</span>
+                </div>
+            </div>
+
+            <div id="register-form-container" class="auth-form-container">
+                <h2>Crear Perfil</h2>
+                <p>Regístrate para comenzar a usar el sistema.</p>
+                <form onsubmit="event.preventDefault(); alert('Simulación: Registrando perfil... Funcionalidad no conectada al backend.');">
+                    <div class="input-group">
+                        <label>Nombre Completo</label>
+                        <input type="text" placeholder="Tu nombre" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" placeholder="ejemplo@correo.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Contraseña</label>
+                        <input type="password" placeholder="Crea una contraseña" required>
+                    </div>
+                    <button type="submit" class="btn-primary auth-submit">Crear Cuenta</button>
+                </form>
+                <div class="auth-switch">
+                    ¿Ya tienes cuenta? <span id="switch-to-login">Inicia sesión</span>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script src="index.js"></script>
 </body>
 
 </html>

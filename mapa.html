@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mapa del Parqueadero - Unimeta</title>
+    <link rel="stylesheet" href="mapa.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <img src="imagenes/logo_unimeta.png" alt="Logo Unimeta" class="logo-img">
+            </div>
+            <nav>
+                <a href="index.html" class="btn-nav">Inicio</a>
+                <a href="pago.html" class="btn-nav btn-nav-primary">Reservar</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="mapa-container">
+        <!-- Título y disponibilidad -->
+        <div class="mapa-header">
+            <div>
+                <h1 class="mapa-title">Mapa del Parqueadero</h1>
+                <p class="mapa-subtitle">Visualiza la distribución y disponibilidad de espacios en tiempo real</p>
+            </div>
+            <div class="mapa-header-right">
+                <div class="jornada-badge" id="jornada-badge">
+                    <span class="jornada-badge-icon" id="jornada-badge-icon">☀️</span>
+                    <div>
+                        <span class="jornada-badge-label" id="jornada-badge-label">Jornada Diurna</span>
+                        <span class="jornada-badge-hora" id="jornada-badge-hora">6 AM – 1 PM</span>
+                    </div>
+                </div>
+                <div class="disponibilidad-badge" id="badge-disponibilidad">
+                    <span class="disp-icon">🏍️</span>
+                    <span class="disp-text"><strong id="espacios-libres">--</strong> de <strong id="espacios-total">33</strong> disponibles</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de Check-in -->
+        <div class="checkin-panel" id="checkin-panel">
+            <div class="checkin-panel-inner">
+                <div class="checkin-info">
+                    <span class="checkin-panel-icon">📍</span>
+                    <div>
+                        <h3>Ya estoy en el parqueadero</h3>
+                        <p>Ingresa tu placa para que el sistema te asigne un espacio disponible</p>
+                    </div>
+                </div>
+                <div class="checkin-form">
+                    <input type="text" id="checkin-placa" placeholder="Ej: ABC-123" maxlength="7">
+                    <button class="btn-checkin" id="btn-checkin" onclick="realizarCheckin()">Ya llegué →</button>
+                </div>
+                <div class="checkin-resultado hidden" id="checkin-resultado"></div>
+            </div>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="leyenda">
+            <div class="leyenda-item">
+                <span class="leyenda-color libre"></span>
+                <span>Libre</span>
+            </div>
+            <div class="leyenda-item">
+                <span class="leyenda-color ocupado"></span>
+                <span>Ocupado</span>
+            </div>
+            <div class="leyenda-item">
+                <span class="leyenda-color mi-espacio"></span>
+                <span>Tu espacio</span>
+            </div>
+        </div>
+
+        <!-- Mapa Visual del Parqueadero -->
+        <div class="mapa-wrapper">
+            <div class="parqueadero" id="parqueadero-mapa">
+                <!-- Zona Superior Izquierda (espacios 1-4, rayas hacia abajo desde el borde superior) -->
+                <div class="zona zona-sup-izq" data-zona="superior-izquierda">
+                    <div class="espacio" data-numero="1"><span>1</span></div>
+                    <div class="espacio" data-numero="2"><span>2</span></div>
+                    <div class="espacio" data-numero="3"><span>3</span></div>
+                    <div class="espacio" data-numero="4"><span>4</span></div>
+                </div>
+
+                <!-- Zona Superior Derecha (espacios 5-9, rayas hacia abajo desde el borde superior) -->
+                <div class="zona zona-sup-der" data-zona="superior-derecha">
+                    <div class="espacio" data-numero="5"><span>5</span></div>
+                    <div class="espacio" data-numero="6"><span>6</span></div>
+                    <div class="espacio" data-numero="7"><span>7</span></div>
+                    <div class="espacio" data-numero="8"><span>8</span></div>
+                    <div class="espacio" data-numero="9"><span>9</span></div>
+                </div>
+
+                <!-- Flecha de flujo: arriba gira a la izquierda -->
+                <div class="flecha flecha-sup">←</div>
+
+                <!-- Zona Izquierda (espacios 23-25, arriba del ascensor) -->
+                <div class="zona zona-izq" data-zona="izquierda">
+                    <div class="espacio" data-numero="23"><span>23</span></div>
+                    <div class="espacio" data-numero="24"><span>24</span></div>
+                    <div class="espacio" data-numero="25"><span>25</span></div>
+                </div>
+
+                <!-- Zona Derecha (espacios 10-22, toda la pared derecha) -->
+                <div class="zona zona-der" data-zona="derecha">
+                    <div class="espacio" data-numero="10"><span>10</span></div>
+                    <div class="espacio" data-numero="11"><span>11</span></div>
+                    <div class="espacio" data-numero="12"><span>12</span></div>
+                    <div class="espacio" data-numero="13"><span>13</span></div>
+                    <div class="espacio" data-numero="14"><span>14</span></div>
+                    <div class="espacio" data-numero="15"><span>15</span></div>
+                    <div class="espacio" data-numero="16"><span>16</span></div>
+                    <div class="espacio" data-numero="17"><span>17</span></div>
+                    <div class="espacio" data-numero="18"><span>18</span></div>
+                    <div class="espacio" data-numero="19"><span>19</span></div>
+                    <div class="espacio" data-numero="20"><span>20</span></div>
+                    <div class="espacio" data-numero="21"><span>21</span></div>
+                    <div class="espacio" data-numero="22"><span>22</span></div>
+                </div>
+
+                <!-- Flecha central (sube) -->
+                <div class="flecha flecha-centro-sube">↑</div>
+
+                <!-- Ascensor -->
+                <div class="ascensor">
+                    <span class="ascensor-icon">🛗</span>
+                    <span class="ascensor-label">Ascensor</span>
+                </div>
+
+                <!-- Zona Inferior Izquierda (espacios 26-30, debajo del ascensor) -->
+                <div class="zona zona-inf-izq" data-zona="inferior-izquierda">
+                    <div class="espacio" data-numero="26"><span>26</span></div>
+                    <div class="espacio" data-numero="27"><span>27</span></div>
+                    <div class="espacio" data-numero="28"><span>28</span></div>
+                    <div class="espacio" data-numero="29"><span>29</span></div>
+                    <div class="espacio" data-numero="30"><span>30</span></div>
+                </div>
+
+                <!-- Flecha inferior (gira a la derecha) -->
+                <div class="flecha flecha-inf">→</div>
+
+                <!-- Zona Inferior Derecha (espacios 31-33) -->
+                <div class="zona zona-inf-der" data-zona="inferior-derecha">
+                    <div class="espacio" data-numero="31"><span>31</span></div>
+                    <div class="espacio" data-numero="32"><span>32</span></div>
+                    <div class="espacio" data-numero="33"><span>33</span></div>
+                </div>
+
+                <!-- Columna / Punto de referencia -->
+                <div class="columna-ref">
+                    <div class="columna-circulo"></div>
+                </div>
+
+                <!-- Entrada -->
+                <div class="entrada">
+                    <span class="entrada-flecha">↑</span>
+                    <span class="entrada-label">ENTRADA</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de info del usuario (aparece tras pago) -->
+        <div class="mi-reserva-panel hidden" id="panel-reserva">
+            <div class="reserva-card">
+                <div class="reserva-header">
+                    <div class="reserva-icon-wrap">
+                        <span class="reserva-check">✅</span>
+                    </div>
+                    <div>
+                        <h3 class="reserva-titulo">Tu espacio asignado</h3>
+                        <p class="reserva-subtitulo">Muestra este ticket en la entrada</p>
+                    </div>
+                </div>
+
+                <div class="reserva-espacio-numero" id="reserva-espacio">
+                    <span class="espacio-big">#--</span>
+                </div>
+
+                <div class="reserva-detalles">
+                    <div class="reserva-row">
+                        <span class="reserva-label">Nombre</span>
+                        <span class="reserva-value" id="reserva-nombre">—</span>
+                    </div>
+                    <div class="reserva-row">
+                        <span class="reserva-label">Placa</span>
+                        <span class="reserva-value" id="reserva-placa">—</span>
+                    </div>
+                    <div class="reserva-row">
+                        <span class="reserva-label">Plan</span>
+                        <span class="reserva-value" id="reserva-plan">—</span>
+                    </div>
+                    <div class="reserva-row">
+                        <span class="reserva-label">Jornada</span>
+                        <span class="reserva-value" id="reserva-jornada">—</span>
+                    </div>
+                    <div class="reserva-row">
+                        <span class="reserva-label">Espacio libre a las</span>
+                        <span class="reserva-value" id="reserva-auto-libera">—</span>
+                    </div>
+                    <div class="reserva-row">
+                        <span class="reserva-label">Referencia</span>
+                        <span class="reserva-value" id="reserva-ref">—</span>
+                    </div>
+                </div>
+
+                <!-- Temporizador -->
+                <div class="temporizador" id="temporizador">
+                    <span class="temp-icon">⏱️</span>
+                    <span class="temp-texto">Tiempo restante: </span>
+                    <span class="temp-valor" id="temp-valor">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tooltip para espacios (se muestra al tocar un espacio ocupado) -->
+        <div class="tooltip-espacio hidden" id="tooltip-espacio">
+            <div class="tooltip-header">
+                <span class="tooltip-titulo">Espacio #<span id="tooltip-num">--</span></span>
+                <button class="tooltip-cerrar" id="tooltip-cerrar">✕</button>
+            </div>
+            <div class="tooltip-body">
+                <div class="tooltip-row">
+                    <span>Usuario</span>
+                    <strong id="tooltip-usuario">—</strong>
+                </div>
+                <div class="tooltip-row">
+                    <span>Placa</span>
+                    <strong id="tooltip-placa">—</strong>
+                </div>
+                <div class="tooltip-row">
+                    <span>Plan</span>
+                    <strong id="tooltip-plan">—</strong>
+                </div>
+                <div class="tooltip-row">
+                    <span>Estado</span>
+                    <strong id="tooltip-estado">—</strong>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Parqueadero Unimeta. Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <script src="mapa.js"></script>
+</body>
+
+</html>

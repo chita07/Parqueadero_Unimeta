@@ -200,9 +200,10 @@ document.getElementById('btn-registrar-manual').addEventListener('click', async 
     const cedula = document.getElementById('reg-cedula').value.trim();
     const telefono = document.getElementById('reg-telefono').value.trim();
     const plan = document.getElementById('reg-plan').value;
+    const jornada = document.getElementById('reg-jornada').value;
 
     if (!placa || !nombre || !cedula) {
-        alert('Por favor completa al menos placa, nombre y cédula.');
+        await uiAlert('Campos Incompletos', 'Por favor completa al menos placa, nombre y cédula.', '⚠️');
         return;
     }
 
@@ -210,11 +211,14 @@ document.getElementById('btn-registrar-manual').addEventListener('click', async 
     btn.disabled = true;
     btn.textContent = 'Guardando...';
 
+    // Buscar espacio libre en check-ins activos
+    const espacioNumero = await buscarEspacioLibreAdmin();
+
     const fechaInicio = new Date();
     const fechaFin = calcFechaFin(fechaInicio, plan);
     const ref = 'EF-' + Date.now().toString().slice(-8);
 
-    const { data, error } = await db.from('pagos').insert([{
+    const pagoData = {
         placa: placa.toUpperCase(),
         nombre: nombre,
         cedula: cedula,
@@ -225,23 +229,41 @@ document.getElementById('btn-registrar-manual').addEventListener('click', async 
         referencia: ref,
         fecha_inicio: fechaInicio.toISOString(),
         fecha_fin: fechaFin.toISOString(),
-        estado: 'activo'
-    }]);
+        estado: 'activo',
+        jornada: jornada
+    };
+
+    const { data, error } = await db.from('pagos').insert([pagoData]).select();
 
     btn.disabled = false;
     btn.textContent = '💵 Registrar Pago en Efectivo';
 
     if (error) {
-        alert('Error al registrar: ' + error.message);
+        await uiAlert('Error del Sistema', 'Error al registrar: ' + error.message, '❌');
         console.error('Supabase error:', error);
         return;
     }
 
+    const pagoInsertado = data[0];
+
+    // Crear check-in automático si hay espacio
+    if (espacioNumero && pagoInsertado) {
+        const autoLiberaA = getAutoLiberaAdmin(jornada);
+        await db.from('checkins').insert([{
+            pago_id: pagoInsertado.id,
+            placa: placa.toUpperCase(),
+            nombre: nombre,
+            espacio_numero: espacioNumero,
+            jornada: jornada,
+            auto_liberar_a: autoLiberaA.toISOString()
+        }]);
+    }
+
     // Mostrar éxito
-    document.getElementById('reg-ref').textContent = ref;
+    document.getElementById('reg-ref').textContent = ref + (espacioNumero ? ' — Espacio #' + espacioNumero : ' — Sin espacio disponible');
     const exito = document.getElementById('registro-exito');
     exito.classList.remove('hidden');
-    setTimeout(() => exito.classList.add('hidden'), 5000);
+    setTimeout(() => exito.classList.add('hidden'), 6000);
 
     // Limpiar formulario
     document.getElementById('reg-placa').value = '';
@@ -250,9 +272,279 @@ document.getElementById('btn-registrar-manual').addEventListener('click', async 
     document.getElementById('reg-telefono').value = '';
     document.getElementById('reg-plan').value = 'diario';
 
-    // Recargar tabla y estadísticas
+    // Recargar tabla, estadísticas y mapa
     cargarRegistros();
+    cargarMapaAdmin();
 });
 
 // Cargar al iniciar
-document.addEventListener('DOMContentLoaded', cargarRegistros);
+document.addEventListener('DOMContentLoaded', () => {
+    cargarRegistros();
+    cargarMapaAdmin();
+    actualizarDashboard();
+});
+
+// ===== UI Dialogs (Alert / Confirm personalizados) =====
+function uiAlert(titulo, mensaje, icono = '⚠️') {
+    return new Promise((resolve) => {
+        document.getElementById('custom-dialog-title').textContent = titulo;
+        document.getElementById('custom-dialog-msg').textContent = mensaje;
+        document.getElementById('custom-dialog-icon').textContent = icono;
+        
+        const actions = document.getElementById('custom-dialog-actions');
+        actions.innerHTML = '<button class="custom-dialog-btn custom-dialog-btn-primary" id="btn-dialog-ok">Aceptar</button>';
+        
+        document.getElementById('custom-dialog-overlay').classList.remove('hidden');
+        
+        document.getElementById('btn-dialog-ok').onclick = () => {
+            document.getElementById('custom-dialog-overlay').classList.add('hidden');
+            resolve();
+        };
+    });
+}
+
+function uiConfirm(titulo, mensaje, icono = '❓') {
+    return new Promise((resolve) => {
+        document.getElementById('custom-dialog-title').textContent = titulo;
+        document.getElementById('custom-dialog-msg').textContent = mensaje;
+        document.getElementById('custom-dialog-icon').textContent = icono;
+        
+        const actions = document.getElementById('custom-dialog-actions');
+        actions.innerHTML = `
+            <button class="custom-dialog-btn custom-dialog-btn-secondary" id="btn-dialog-cancel">Cancelar</button>
+            <button class="custom-dialog-btn custom-dialog-btn-primary" id="btn-dialog-ok">Aceptar</button>
+        `;
+        
+        document.getElementById('custom-dialog-overlay').classList.remove('hidden');
+        
+        document.getElementById('btn-dialog-ok').onclick = () => {
+            document.getElementById('custom-dialog-overlay').classList.add('hidden');
+            resolve(true);
+        };
+        document.getElementById('btn-dialog-cancel').onclick = () => {
+            document.getElementById('custom-dialog-overlay').classList.add('hidden');
+            resolve(false);
+        };
+    });
+}
+
+// ===== MAPA DEL PARQUEADERO (Admin) =====
+
+const TOTAL_ESPACIOS_ADMIN = 33;
+let mapaAdmin = {};          // { numero: pago }
+let espacioSeleccionado = null;
+const planNombresAdmin = { diario: 'Diario', semanal: 'Semanal', mensual: 'Mensual' };
+
+// Lógica de jornadas (admin)
+const JORNADAS_ADMIN = {
+    diurna:   { inicio: 6,  fin: 13 },
+    nocturna: { inicio: 18, fin: 22 }
+};
+
+function getAutoLiberaAdmin(jornada) {
+    const ahora = new Date();
+    const d = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate());
+    if (jornada === 'diurna')   d.setHours(13, 0, 0, 0);
+    if (jornada === 'nocturna') d.setHours(22, 0, 0, 0);
+    if (d < ahora) d.setDate(d.getDate() + 1);
+    return d;
+}
+
+// Buscar espacio libre validando contra check-ins activos
+async function buscarEspacioLibreAdmin() {
+    const ahora = new Date().toISOString();
+    const { data, error } = await db
+        .from('checkins')
+        .select('espacio_numero')
+        .gt('auto_liberar_a', ahora);
+    if (error) return null;
+    const ocupados = new Set((data || []).map(c => c.espacio_numero));
+    for (let i = 1; i <= TOTAL_ESPACIOS_ADMIN; i++) {
+        if (!ocupados.has(i)) return i;
+    }
+    return null;
+}
+
+async function cargarMapaAdmin() {
+    const ahora = new Date().toISOString();
+    // Limpiar check-ins vencidos silenciosamente
+    await db.from('checkins').delete().lt('auto_liberar_a', ahora);
+
+    const { data, error } = await db
+        .from('checkins')
+        .select('*')
+        .gt('auto_liberar_a', ahora);
+
+    if (error) {
+        console.warn('Error cargando mapa admin:', error.message);
+        document.querySelectorAll('.admin-espacio').forEach(el => el.classList.add('libre'));
+        document.getElementById('stat-espacios').textContent = '33/33';
+        document.getElementById('admin-libres').textContent = '33';
+        document.getElementById('admin-ocupados').textContent = '0';
+        return;
+    }
+
+    mapaAdmin = {};
+    (data || []).forEach(c => { mapaAdmin[c.espacio_numero] = c; });
+    renderizarMapaAdmin();
+    actualizarContadorAdmin();
+}
+
+function renderizarMapaAdmin() {
+    document.querySelectorAll('.admin-espacio').forEach(el => {
+        const numero = parseInt(el.dataset.num);
+        const pago = mapaAdmin[numero];
+        el.classList.remove('libre', 'ocupado');
+        el.classList.add(pago ? 'ocupado' : 'libre');
+        // Reemplazar listener (clonar nodo para evitar duplicados)
+        const nuevo = el.cloneNode(true);
+        nuevo.addEventListener('click', () => abrirModalEspacio(numero, pago || null));
+        el.parentNode.replaceChild(nuevo, el);
+    });
+}
+
+function actualizarContadorAdmin() {
+    const ocupados = Object.keys(mapaAdmin).length;
+    const libres = TOTAL_ESPACIOS_ADMIN - ocupados;
+    document.getElementById('admin-libres').textContent = libres;
+    document.getElementById('admin-ocupados').textContent = ocupados;
+    document.getElementById('stat-espacios').textContent = libres + '/' + TOTAL_ESPACIOS_ADMIN;
+}
+
+function abrirModalEspacio(numero, checkin) {
+    espacioSeleccionado = checkin ? { ...checkin, _numero: numero } : { _numero: numero };
+    document.getElementById('modal-num').textContent = numero;
+    document.getElementById('modal-asignar').classList.add('hidden');
+
+    if (!checkin) {
+        // Espacio LIBRE — mostrar datos vacíos y lista de usuarios para asignar
+        document.getElementById('modal-estado').textContent = '🟢 Libre';
+        document.getElementById('modal-estado').style.color = '#2eb85c';
+        document.getElementById('modal-usuario').textContent = '—';
+        document.getElementById('modal-placa').textContent = '—';
+        document.getElementById('modal-cedula').textContent = '—';
+        document.getElementById('modal-telefono').textContent = '—';
+        document.getElementById('modal-plan-tipo').textContent = '—';
+        document.getElementById('modal-vence').textContent = '—';
+        document.getElementById('modal-ref').textContent = '—';
+        document.getElementById('btn-liberar').classList.add('hidden');
+
+        // Cargar lista de usuarios activos sin check-in
+        document.getElementById('modal-asignar').classList.remove('hidden');
+        cargarUsuariosSinCheckin(numero);
+    } else {
+        // Espacio OCUPADO — mostrar info del check-in
+        const autoLibera = new Date(checkin.auto_liberar_a);
+        const activo = new Date() <= autoLibera;
+        document.getElementById('modal-estado').textContent = activo ? '🔴 Ocupado (Activo)' : '🟡 Vencido (liberar)';
+        document.getElementById('modal-estado').style.color = activo ? '#E30614' : '#b8860b';
+        document.getElementById('modal-usuario').textContent = checkin.nombre || '—';
+        document.getElementById('modal-placa').textContent = checkin.placa || '—';
+        document.getElementById('modal-cedula').textContent = '—';
+        document.getElementById('modal-telefono').textContent = '—';
+        document.getElementById('modal-plan-tipo').textContent = JORNADAS_ADMIN[checkin.jornada] ? (checkin.jornada === 'diurna' ? '☀️ Diurna' : '🌙 Nocturna') : checkin.jornada;
+        document.getElementById('modal-vence').textContent = autoLibera.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+        document.getElementById('modal-ref').textContent = checkin.placa || '—';
+        document.getElementById('btn-liberar').classList.remove('hidden');
+    }
+
+    document.getElementById('modal-espacio-overlay').classList.remove('hidden');
+}
+
+async function cargarUsuariosSinCheckin(numeroEspacio) {
+    const lista = document.getElementById('modal-usuarios-lista');
+    lista.innerHTML = '<div class="modal-cargando">Cargando usuarios...</div>';
+
+    const ahora = new Date().toISOString();
+
+    // Obtener pagos activos
+    const { data: pagos, error: errPagos } = await db
+        .from('pagos')
+        .select('*')
+        .gt('fecha_fin', ahora)
+        .order('nombre', { ascending: true });
+
+    if (errPagos || !pagos || pagos.length === 0) {
+        lista.innerHTML = '<div class="modal-sin-usuarios">No hay suscriptores activos.</div>';
+        return;
+    }
+
+    // Obtener check-ins activos (placas que ya tienen espacio hoy)
+    const { data: checkins } = await db
+        .from('checkins')
+        .select('placa')
+        .gt('auto_liberar_a', ahora);
+
+    const placasConCheckin = new Set((checkins || []).map(c => c.placa.toUpperCase()));
+
+    // Filtrar pagos que NO tienen check-in activo
+    const sinCheckin = pagos.filter(p => !placasConCheckin.has((p.placa || '').toUpperCase()));
+
+    if (sinCheckin.length === 0) {
+        lista.innerHTML = '<div class="modal-sin-usuarios">✅ Todos los suscriptores activos ya tienen check-in hoy.</div>';
+        return;
+    }
+
+    lista.innerHTML = sinCheckin.map(p => `
+        <div class="modal-usuario-item" onclick="asignarUsuarioEspacio(${numeroEspacio}, '${p.placa}', '${p.nombre}', ${p.id}, '${p.jornada || 'diurna'}')">
+            <div class="modal-usuario-info">
+                <span class="modal-usuario-placa">🏍️ ${p.placa}</span>
+                <span class="modal-usuario-nombre">${p.nombre}</span>
+                <span class="modal-usuario-plan">${planNombresAdmin[p.tipo_servicio] || p.tipo_servicio} · ${p.jornada === 'nocturna' ? '🌙 Nocturna' : '☀️ Diurna'}</span>
+            </div>
+            <button class="btn-asignar-usuario">Asignar →</button>
+        </div>
+    `).join('');
+}
+
+async function asignarUsuarioEspacio(numeroEspacio, placa, nombre, pagoId, jornada) {
+    if (!(await uiConfirm('Confirmar Asignación', `¿Asignar el espacio #${numeroEspacio} a ${nombre} (${placa})?`, '🚘'))) return;
+
+    const autoLiberaA = getAutoLiberaAdmin(jornada);
+
+    const { error } = await db.from('checkins').insert([{
+        pago_id:        pagoId,
+        placa:          placa.toUpperCase(),
+        nombre:         nombre,
+        espacio_numero: numeroEspacio,
+        jornada:        jornada,
+        auto_liberar_a: autoLiberaA.toISOString()
+    }]);
+
+    if (error) {
+        await uiAlert('Error', 'Error al asignar: ' + error.message, '❌');
+        return;
+    }
+
+    cerrarModal();
+    cargarMapaAdmin();
+    cargarRegistros();
+}
+
+function cerrarModal() {
+    document.getElementById('modal-espacio-overlay').classList.add('hidden');
+    espacioSeleccionado = null;
+}
+
+document.getElementById('modal-espacio-overlay').addEventListener('click', function (e) {
+    if (e.target === this) cerrarModal();
+});
+
+async function liberarEspacio() {
+    if (!espacioSeleccionado) return;
+    if (!(await uiConfirm('Liberar Espacio', '¿Deseas liberar este espacio? Se eliminará el check-in activo de forma inmediata.', '🔓'))) return;
+
+    // Eliminar el check-in asociado al espacio
+    const { error } = await db
+        .from('checkins')
+        .delete()
+        .eq('espacio_numero', espacioSeleccionado._numero)
+        .gt('auto_liberar_a', new Date().toISOString());
+
+    if (error) {
+        await uiAlert('Error', 'Error al liberar: ' + error.message, '❌');
+        return;
+    }
+    cerrarModal();
+    cargarMapaAdmin();
+}
