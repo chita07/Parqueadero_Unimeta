@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
         if (geminiKey) {
             try {
-                const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+                const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
                 const tRes = await fetch(testUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -112,7 +112,7 @@ Instrucciones estrictas:
         if (geminiKey) {
             let ultimoErrorGemini = '';
             try {
-                const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro'];
+                const models = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro'];
                 let plateResult = null;
                 let usedModel = null;
 
