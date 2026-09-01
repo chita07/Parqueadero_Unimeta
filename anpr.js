@@ -242,10 +242,10 @@ function detectarRegionPlacaAmarilla(imgElement) {
     // Encontrar el rectángulo continuo con mayor concentración de bloques amarillos
     let bestX = 0, bestY = 0, bestW = 0, bestH = 0, maxDensity = 0;
 
-    // Ventanas deslizantes representativas de placas (anchos de 20% a 70% del cuadro)
-    for (let winCols = Math.floor(cols * 0.15); winCols <= Math.floor(cols * 0.75); winCols += 2) {
-        // Relación de aspecto de placa (ancho/alto entre 1.1 y 2.5)
-        for (let winRows = Math.floor(winCols / 2.3); winRows <= Math.floor(winCols / 1.05); winRows += 2) {
+    // Ventanas deslizantes representativas de placas (anchos de 20% a 95% del cuadro)
+    for (let winCols = Math.floor(cols * 0.20); winCols <= Math.floor(cols * 0.95); winCols += 2) {
+        // Relación de aspecto de placa (ancho/alto entre 1.1 y 2.6)
+        for (let winRows = Math.floor(winCols / 2.6); winRows <= Math.floor(winCols / 1.05); winRows += 2) {
             if (winRows >= rows) continue;
 
             for (let r = 0; r <= rows - winRows; r += 2) {
@@ -259,7 +259,7 @@ function detectarRegionPlacaAmarilla(imgElement) {
                     const area = winRows * winCols * (blockSize * blockSize);
                     const density = count / area;
 
-                    if (count > 250 && density > maxDensity) {
+                    if (count > 200 && density > maxDensity) {
                         maxDensity = density;
                         bestX = Math.floor(c * blockSize / scale);
                         bestY = Math.floor(r * blockSize / scale);
@@ -272,22 +272,22 @@ function detectarRegionPlacaAmarilla(imgElement) {
     }
 
     // Si se encontró un cluster amarillo con suficiente densidad (>15%)
-    if (maxDensity > 0.15 && bestW > 40 && bestH > 20) {
-        // Recorte interior adaptativo:
-        // Si la placa es grande (>100px alto), se puede recortar el borde institucional (15% top / 10% bottom).
-        // Si la placa es pequeña (<100px alto, foto lejana), el recorte debe ser mínimo (4% top / 4% bottom) para no cortar las letras superiores.
-        const esGrande = bestH >= 100;
-        const innerTrimX = Math.round(bestW * (esGrande ? 0.05 : 0.02));
-        const innerTrimY = Math.round(bestH * (esGrande ? 0.16 : 0.04));
-        const innerTrimYBot = Math.round(bestH * (esGrande ? 0.12 : 0.04));
+    if (maxDensity > 0.12 && bestW > 40 && bestH > 20) {
+        // Si la foto ya está enfocada casi totalmente en la placa (más del 60% del ancho/alto)
+        const esPrimerPlano = (bestW / origW) > 0.65 && (bestH / origH) > 0.40;
+        
+        // Recorte interior seguro (no comerse las letras superiores o inferiores)
+        const innerTrimX = esPrimerPlano ? 0 : Math.round(bestW * 0.03);
+        const innerTrimY = esPrimerPlano ? Math.round(bestH * 0.02) : Math.round(bestH * 0.06);
+        const innerTrimYBot = esPrimerPlano ? Math.round(bestH * 0.02) : Math.round(bestH * 0.05);
 
         const cropX = Math.max(0, bestX + innerTrimX);
         const cropY = Math.max(0, bestY + innerTrimY);
         const cropW = Math.min(origW - cropX, bestW - innerTrimX * 2);
         const cropH = Math.min(origH - cropY, bestH - innerTrimY - innerTrimYBot);
 
-        if (cropW < 30 || cropH < 12) {
-            // Fallback: usar la region completa si el recorte interior queda muy pequeño
+        if (cropW < 40 || cropH < 20) {
+            // Fallback: usar la region completa
             const cropCanvas2 = document.createElement('canvas');
             cropCanvas2.width = Math.min(origW, bestW);
             cropCanvas2.height = Math.min(origH, bestH);
@@ -300,7 +300,7 @@ function detectarRegionPlacaAmarilla(imgElement) {
         cropCanvas.height = cropH;
         const cropCtx = cropCanvas.getContext('2d');
         cropCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-        console.log(`✂️ Recorte interior adaptativo: ${cropW}x${cropH}px (${esGrande ? 'cercana' : 'lejana'})`);
+        console.log(`✂️ Recorte de placa: ${cropW}x${cropH}px (primerPlano: ${esPrimerPlano})`);
         return cropCanvas;
     }
 
@@ -366,11 +366,11 @@ function limpiarBordesNegros(ctx, width, height) {
     ctx.putImageData(imgData, 0, 0);
 }
 
-function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false) {
+function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false, afilar = false) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-            const MIN_WIDTH = 550;
+            const MIN_WIDTH = 900;
             let w = img.naturalWidth || img.width;
             let h = img.naturalHeight || img.height;
             if (w < MIN_WIDTH) {
@@ -407,6 +407,23 @@ function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false) 
             for (let i = 0; i < d.length; i += 4) {
                 const stretched = Math.min(255, Math.max(0, ((d[i] - min) / range) * 255));
                 d[i] = d[i + 1] = d[i + 2] = stretched;
+            }
+
+            // Afilado (Sharpen Kernel 3×3) para mejorar bordes de caracteres
+            if (afilar) {
+                const src = new Uint8ClampedArray(d);
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        const i = (y * w + x) * 4;
+                        const val = 5 * src[i]
+                            - src[((y - 1) * w + x) * 4]
+                            - src[((y + 1) * w + x) * 4]
+                            - src[(y * w + x - 1) * 4]
+                            - src[(y * w + x + 1) * 4];
+                        const clamped = Math.min(255, Math.max(0, val));
+                        d[i] = d[i + 1] = d[i + 2] = clamped;
+                    }
+                }
             }
 
             if (usarOtsu) {
@@ -487,10 +504,10 @@ function extraerPlacaColombiana(textoOCR) {
 
     // Eliminar palabras institucionales
     raw = raw.replace(/COLOMBIA/g, '')
-             .replace(/VILLAVICENCIO/g, '')
-             .replace(/BOGOTA/g, '')
-             .replace(/MEDELLIN/g, '')
-             .replace(/CALI/g, '');
+        .replace(/VILLAVICENCIO/g, '')
+        .replace(/BOGOTA/g, '')
+        .replace(/MEDELLIN/g, '')
+        .replace(/CALI/g, '');
 
     // 1. Extraer tokens alfanuméricos
     const tokens = (raw.match(/[A-Z0-9]+/g) || []).filter(t => t.length > 0);
@@ -513,7 +530,7 @@ function extraerPlacaColombiana(textoOCR) {
             const c = str[pos];
             if (pos < 3) {
                 // Primeros 3 caracteres deben ser letras
-                const lMap = { 
+                const lMap = {
                     '0': 'O', '1': 'I', '5': 'S', '8': 'B', '2': 'Z', '6': 'G', '7': 'T', '4': 'A'
                 };
                 let mapped = lMap[c] || c;
@@ -593,8 +610,8 @@ function extraerPlacaColombiana(textoOCR) {
 function esPlacaValida(placa) {
     if (!placa || placa.length < 5 || placa.length > 6) return false;
     return /^[A-Z]{3}[0-9]{2}$/.test(placa) ||
-           /^[A-Z]{3}[0-9]{2}[A-Z]$/.test(placa) ||
-           /^[A-Z]{3}[0-9]{3}$/.test(placa);
+        /^[A-Z]{3}[0-9]{2}[A-Z]$/.test(placa) ||
+        /^[A-Z]{3}[0-9]{3}$/.test(placa);
 }
 
 // ===== 7B. Votación por Consenso de Pases (Criterio: Conteo de Pases > Confianza) =====
@@ -637,7 +654,7 @@ function votarConsenso(resultadosTorneo) {
         let mejorConf = -1;
         for (const c in conteo) {
             const gana = conteo[c] > mejorConteo ||
-                         (conteo[c] === mejorConteo && pesoConf[c] > mejorConf);
+                (conteo[c] === mejorConteo && pesoConf[c] > mejorConf);
             if (gana) {
                 mejorConteo = conteo[c];
                 mejorConf = pesoConf[c];
@@ -650,7 +667,44 @@ function votarConsenso(resultadosTorneo) {
     return esPlacaValida(resultado) ? resultado : mejorGrupo[0].placa;
 }
 
-// ===== 8. Procesamiento OCR Multi-Paso con Tesseract.js =====
+// ===== 7C. Reconocimiento Híbrido Asistido por IA Multimodal (Gemini Vision / Vercel API) =====
+async function consultarIAGemini(cropDataUrl, rawDataUrl) {
+    try {
+        const payload = {
+            image: cropDataUrl || rawDataUrl,
+            rawImage: rawDataUrl || cropDataUrl
+        };
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 9000); // 9 seg timeout
+
+        const response = await fetch('/api/anpr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            console.warn('API /api/anpr no respondió 200:', response.status);
+            return null;
+        }
+
+        const data = await response.json();
+        if (data && data.success && data.valida && data.placa) {
+            console.log(`🤖 [${data.motor || 'IA Vision'}] Detectó placa con éxito:`, data.placa, data);
+            return data;
+        }
+        return null;
+    } catch (e) {
+        console.info('IA Serverless no disponible (usando OCR Local):', e.message);
+        return null;
+    }
+}
+
+// ===== 8. Procesamiento OCR Híbrido (IA Gemini + Tesseract.js Multi-Paso) =====
 async function procesarPlaca() {
     if (!imagenCapturada) {
         await uiAlert('Error', 'No hay ninguna imagen cargada para procesar.', '⚠️');
@@ -662,6 +716,7 @@ async function procesarPlaca() {
     const placaBox = document.getElementById('placa-detectada-box');
     const verifCard = document.getElementById('verificacion-resultado');
     const btnProcesar = document.getElementById('btn-procesar');
+    const badgeTipo = document.getElementById('ocr-badge-tipo');
 
     resArea.classList.remove('hidden');
     ocrStatus.classList.remove('hidden');
@@ -669,7 +724,7 @@ async function procesarPlaca() {
     verifCard.classList.add('hidden');
 
     btnProcesar.disabled = true;
-    btnProcesar.textContent = '⏳ Extrayendo...';
+    btnProcesar.textContent = '⏳ Extrayendo con IA / OCR...';
 
     document.getElementById('ocr-progress').style.width = '0%';
     document.getElementById('ocr-progress-pct').textContent = '0%';
@@ -677,27 +732,35 @@ async function procesarPlaca() {
     try {
         let canvasParaPreprocesar = imagenCapturada;
 
-        // Detección de región amarilla (solo para imágenes de archivo — para cámara ya se recortó el ROI)
-        if (metodoCaptura === 'archivo') {
-            const imgTmp = new Image();
-            await new Promise((r) => { imgTmp.onload = r; imgTmp.src = imagenCapturada; });
-            const regionPlaca = detectarRegionPlacaAmarilla(imgTmp);
-            if (regionPlaca) {
-                canvasParaPreprocesar = regionPlaca;
-                console.log('✅ Placa localizada y recortada (zona de caracteres únicamente).');
-            }
+        // Detección de región amarilla (localizar y recortar la zona de caracteres de la placa)
+        const imgTmp = new Image();
+        await new Promise((r) => { imgTmp.onload = r; imgTmp.src = imagenCapturada; });
+        const regionPlaca = detectarRegionPlacaAmarilla(imgTmp);
+        if (regionPlaca) {
+            canvasParaPreprocesar = regionPlaca;
+            console.log('✅ Placa localizada y recortada (zona de caracteres únicamente).');
         }
 
-        // Preparar las 4 variantes de imagen para el torneo
-        const imgContraste  = await preprocesarImagen(canvasParaPreprocesar, false, false);
-        const imgOtsu       = await preprocesarImagen(canvasParaPreprocesar, true,  false);
-        const imgOtsuInvert = await preprocesarImagen(canvasParaPreprocesar, true,  true);
+        // Obtener dataURL del recorte para enviar a la IA
+        const cropDataUrl = typeof canvasParaPreprocesar === 'string'
+            ? canvasParaPreprocesar
+            : canvasParaPreprocesar.toDataURL('image/png');
+
+        // Lanzar consulta de IA Gemini en paralelo mientras se preparan los filtros locales
+        const promesaIA = consultarIAGemini(cropDataUrl, imagenCapturada);
+
+        // Preparar las variantes de imagen para el torneo OCR local (7 pases)
+        const imgContraste = await preprocesarImagen(canvasParaPreprocesar, false, false);
+        const imgOtsu = await preprocesarImagen(canvasParaPreprocesar, true, false);
+        const imgOtsuInvert = await preprocesarImagen(canvasParaPreprocesar, true, true);
+        const imgSharpContr = await preprocesarImagen(canvasParaPreprocesar, false, false, true);
+        const imgSharpOtsu = await preprocesarImagen(canvasParaPreprocesar, true, false, true);
 
         // Mostrar miniaturas en el panel de depuración visual (FASE 1)
         mostrarDebugVisual(canvasParaPreprocesar, imgContraste, imgOtsu, imgOtsuInvert);
 
-        document.getElementById('ocr-progress').style.width = '25%';
-        document.getElementById('ocr-progress-pct').textContent = '25%';
+        document.getElementById('ocr-progress').style.width = '20%';
+        document.getElementById('ocr-progress-pct').textContent = '20%';
 
         // Instanciar Worker con modelo LSTM de alta precisión (tessdata_best)
         const worker = await Tesseract.createWorker('eng', 1, {
@@ -711,10 +774,13 @@ async function procesarPlaca() {
         const WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
         const pases = [
-            { img: imgContraste,  psm: '7',  label: 'PSM7-contraste'  },
-            { img: imgContraste,  psm: '8',  label: 'PSM8-contraste'  },
-            { img: imgOtsu,       psm: '6',  label: 'PSM6-otsu'       },
-            { img: imgOtsuInvert, psm: '13', label: 'PSM13-inv'       },
+            { img: imgContraste, psm: '7', label: 'PSM7-contraste' },
+            { img: imgContraste, psm: '8', label: 'PSM8-contraste' },
+            { img: imgSharpContr, psm: '7', label: 'PSM7-sharp' },
+            { img: imgOtsu, psm: '6', label: 'PSM6-otsu' },
+            { img: imgOtsu, psm: '7', label: 'PSM7-otsu' },
+            { img: imgSharpOtsu, psm: '7', label: 'PSM7-sharp-otsu' },
+            { img: imgOtsuInvert, psm: '13', label: 'PSM13-inv' },
         ];
 
         const resultadosTorneo = [];
@@ -729,7 +795,7 @@ async function procesarPlaca() {
             });
             const res = await worker.recognize(pase.img);
             const texto = (res.data.text || '').trim();
-            const conf  = Math.round(res.data.confidence || 0);
+            const conf = Math.round(res.data.confidence || 0);
 
             console.log(`🔍 [${pase.label}] conf=${conf}% → "${texto.replace(/\n/g, ' ')}"`);
 
@@ -748,17 +814,20 @@ async function procesarPlaca() {
             }
             if (conf > mejorConfianza) mejorConfianza = conf;
 
-            const pct = Math.round(((i + 1) / pases.length) * 80) + 10;
+            const pct = Math.round(((i + 1) / pases.length) * 70) + 20;
             document.getElementById('ocr-progress').style.width = pct + '%';
             document.getElementById('ocr-progress-pct').textContent = pct + '%';
         }
 
         await worker.terminate();
 
+        // Esperar el resultado de la IA (si aún no terminó)
+        const resultadoIA = await promesaIA;
+
         document.getElementById('ocr-progress').style.width = '100%';
         document.getElementById('ocr-progress-pct').textContent = '100%';
 
-        // Tabla de depuración en consola para evidencia científica y análisis de dataset
+        // Tabla de depuración en consola
         if (resultadosTorneo.length > 0) {
             console.table(resultadosTorneo.map(r => ({
                 pase: r.label,
@@ -769,17 +838,45 @@ async function procesarPlaca() {
             })));
         }
 
-        // Selección por consenso de pases
-        const placaConsenso = votarConsenso(resultadosTorneo);
-        const ganador = resultadosTorneo.find(r => r.placa === placaConsenso) || resultadosTorneo[0] || null;
+        // Selección por consenso de pases locales
+        const placaConsensoLocal = votarConsenso(resultadosTorneo);
 
-        ocrConfianza = ganador ? ganador.conf : mejorConfianza;
+        let placaFinal = '';
+        let origenMotor = '';
+
+        if (resultadoIA && resultadoIA.valida && esPlacaValida(resultadoIA.placa)) {
+            // IA Gemini tiene máxima prioridad en visión multimodal
+            placaFinal = resultadoIA.placa;
+            ocrConfianza = resultadoIA.confianza || 98;
+            origenMotor = resultadoIA.motor || '🤖 IA Gemini Vision';
+            console.log(`✨ [DECISIÓN] Placa adoptada por ${origenMotor}: ${placaFinal}`);
+        } else if (placaConsensoLocal) {
+            placaFinal = placaConsensoLocal;
+            const acuerdos = resultadosTorneo.filter(r => r.placa === placaFinal).length;
+            const confConsenso = Math.round((acuerdos / pases.length) * 100);
+            const confRawMejor = Math.max(...resultadosTorneo.filter(r => r.placa === placaFinal).map(r => r.conf));
+            ocrConfianza = Math.max(confConsenso, confRawMejor);
+            origenMotor = '⚡ Tesseract.js (Consenso)';
+            console.log(`⚡ [DECISIÓN] Placa adoptada por ${origenMotor}: ${placaFinal} (${ocrConfianza}%)`);
+        } else {
+            placaFinal = '';
+            ocrConfianza = 0;
+            origenMotor = 'No identificada';
+        }
+
+        // Actualizar UI
+        if (badgeTipo) {
+            badgeTipo.textContent = origenMotor;
+        }
         document.getElementById('ocr-confianza-valor').textContent = ocrConfianza + '%';
 
-        // Mostrar todos los textos crudos obtenidos en el torneo
+        // Mostrar textos crudos obtenidos
         const rawInfo = document.getElementById('ocr-raw-info');
         const rawTextEl = document.getElementById('ocr-raw-text');
-        const resumenCrudo = textosCrudos.join(' | ');
+        let resumenCrudo = textosCrudos.join(' | ');
+        if (resultadoIA && resultadoIA.raw) {
+            resumenCrudo = `[IA]: ${resultadoIA.raw} | ` + resumenCrudo;
+        }
         if (resumenCrudo.trim()) {
             rawInfo.classList.remove('hidden');
             rawTextEl.textContent = resumenCrudo.replace(/\n/g, ' ');
@@ -787,24 +884,18 @@ async function procesarPlaca() {
             rawInfo.classList.add('hidden');
         }
 
-        const placa = placaConsenso;
-        placaDetectada = placa || '';
-
+        placaDetectada = placaFinal || '';
         ocrStatus.classList.add('hidden');
         placaBox.classList.remove('hidden');
 
-        if (placa) {
-            const formatoDisplay = placa.length === 5
-                ? placa.slice(0, 3) + ' · ' + placa.slice(3)
-                : placa.slice(0, 3) + ' · ' + placa.slice(3);
+        if (placaFinal) {
+            const formatoDisplay = placaFinal.slice(0, 3) + ' · ' + placaFinal.slice(3);
             document.getElementById('placa-code-text').textContent = formatoDisplay;
-            document.getElementById('placa-corregida').value = placa;
-            console.log(`🏆 Placa ganadora por consenso: ${placa} (Conf: ${ocrConfianza}%)`);
+            document.getElementById('placa-corregida').value = placaFinal;
         } else {
             document.getElementById('placa-code-text').textContent = 'NO DETECTADA';
             document.getElementById('placa-corregida').value = '';
             document.getElementById('placa-corregida').placeholder = 'Ingresa placa manualmente...';
-            console.log('❌ Ningún pase produjo una placa válida. Textos:', textosCrudos);
         }
 
         resArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -869,13 +960,13 @@ async function verificarPago() {
         await db.from('alertas_acceso').insert([{
             placa_detectada: placaDetectada || placaFinal,
             placa_corregida: inputCorregido || null,
-            tiene_pago:      tienePago,
-            pago_id:         pago ? pago.id : null,
-            nombre_usuario:  pago ? pago.nombre : null,
-            tipo_servicio:   pago ? pago.tipo_servicio : null,
-            metodo_captura:  metodoCaptura,
-            confianza_ocr:   ocrConfianza + '%',
-            atendida:        false
+            tiene_pago: tienePago,
+            pago_id: pago ? pago.id : null,
+            nombre_usuario: pago ? pago.nombre : null,
+            tipo_servicio: pago ? pago.tipo_servicio : null,
+            metodo_captura: metodoCaptura,
+            confianza_ocr: ocrConfianza + '%',
+            atendida: false
         }]);
 
         // Notificar a otras pestañas (panel admin) en tiempo real
