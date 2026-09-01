@@ -256,30 +256,45 @@ function detectarRegionPlacaAmarilla(imgElement) {
 
     // Si se encontró un cluster amarillo con suficiente densidad (>15%)
     if (maxDensity > 0.15 && bestW > 50 && bestH > 25) {
-        const padX = Math.round(bestW * 0.05);
-        const padY = Math.round(bestH * 0.05);
-        const cropX = Math.max(0, bestX - padX);
-        const cropY = Math.max(0, bestY - padY);
-        const cropW = Math.min(origW - cropX, bestW + padX * 2);
-        const cropH = Math.min(origH - cropY, bestH + padY * 2);
+        // MEJORA 1: Recorte interior — eliminar bordes donde dice "COLOMBIA" y ciudad
+        // Las placas colombianas tienen texto institucional en el 20% superior e inferior.
+        // Recortamos solo el 65% central vertical (zona de caracteres) y 90% horizontal.
+        const innerTrimX = Math.round(bestW * 0.05);  // 5% cada lado horizontal
+        const innerTrimY = Math.round(bestH * 0.20);  // 20% top (COLOMBIA) + 15% bottom (ciudad)
+        const innerTrimYBot = Math.round(bestH * 0.15);
+
+        const cropX = Math.max(0, bestX + innerTrimX);
+        const cropY = Math.max(0, bestY + innerTrimY);
+        const cropW = Math.min(origW - cropX, bestW - innerTrimX * 2);
+        const cropH = Math.min(origH - cropY, bestH - innerTrimY - innerTrimYBot);
+
+        if (cropW < 30 || cropH < 12) {
+            // Fallback: usar la region completa si el recorte interior queda muy pequeño
+            const cropCanvas2 = document.createElement('canvas');
+            cropCanvas2.width = Math.min(origW, bestW);
+            cropCanvas2.height = Math.min(origH, bestH);
+            cropCanvas2.getContext('2d').drawImage(imgElement, bestX, bestY, bestW, bestH, 0, 0, cropCanvas2.width, cropCanvas2.height);
+            return cropCanvas2;
+        }
 
         const cropCanvas = document.createElement('canvas');
         cropCanvas.width = cropW;
         cropCanvas.height = cropH;
         const cropCtx = cropCanvas.getContext('2d');
         cropCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+        console.log(`✂️ Recorte interior: ${cropW}x${cropH}px (eliminado borde institucional)`);
         return cropCanvas;
     }
 
     return null;
 }
 
-// ===== 6. Pre-procesamiento de Imagen (Escalado + Contraste Grayscale + Otsu) =====
-function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false) {
+// ===== 6. Pre-procesamiento de Imagen (Escalado + Contraste + Otsu opcional) =====
+function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-            const MIN_WIDTH = 500;
+            const MIN_WIDTH = 520;
             let w = img.naturalWidth || img.width;
             let h = img.naturalHeight || img.height;
             if (w < MIN_WIDTH) {
@@ -300,13 +315,13 @@ function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false) {
             const imageData = ctx.getImageData(0, 0, w, h);
             const d = imageData.data;
 
-            // Escala de grises
+            // Escala de grises (luminosidad perceptual)
             for (let i = 0; i < d.length; i += 4) {
                 const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
                 d[i] = d[i + 1] = d[i + 2] = gray;
             }
 
-            // Aumento de contraste (Normalización de histograma)
+            // Estiramiento de histograma (contraste máximo)
             let min = 255, max = 0;
             for (let i = 0; i < d.length; i += 4) {
                 if (d[i] < min) min = d[i];
@@ -319,6 +334,7 @@ function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false) {
             }
 
             if (usarOtsu) {
+                // Umbralización de Otsu: calcula el umbral óptimo para separar texto de fondo
                 const histogram = new Array(256).fill(0);
                 for (let i = 0; i < d.length; i += 4) {
                     histogram[Math.round(d[i])]++;
@@ -343,6 +359,15 @@ function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false) {
                 for (let i = 0; i < d.length; i += 4) {
                     const val = d[i] < threshold ? 0 : 255;
                     d[i] = d[i + 1] = d[i + 2] = val;
+                }
+            }
+
+            // MEJORA 3: Inversión de imagen (para casos donde Otsu invierte los colores)
+            if (invertir) {
+                for (let i = 0; i < d.length; i += 4) {
+                    d[i] = 255 - d[i];
+                    d[i + 1] = 255 - d[i + 1];
+                    d[i + 2] = 255 - d[i + 2];
                 }
             }
 
@@ -487,59 +512,98 @@ async function procesarPlaca() {
     try {
         let canvasParaPreprocesar = imagenCapturada;
 
-        // Si es archivo, buscar la región amarilla con alta densidad
+        // Detección de región amarilla (solo para imágenes de archivo — para cámara ya se recortó el ROI)
         if (metodoCaptura === 'archivo') {
             const imgTmp = new Image();
             await new Promise((r) => { imgTmp.onload = r; imgTmp.src = imagenCapturada; });
             const regionPlaca = detectarRegionPlacaAmarilla(imgTmp);
             if (regionPlaca) {
                 canvasParaPreprocesar = regionPlaca;
-                console.log('✅ Región amarilla de placa identificada y recortada.');
+                console.log('✅ Placa localizada y recortada (zona de caracteres únicamente).');
             }
         }
 
-        // Paso 1: Preprocesamiento de alto contraste (sin forzar binarización dura para permitir a Tesseract usar sus filtros internos)
-        const imagenOptimizada = await preprocesarImagen(canvasParaPreprocesar, false);
+        // ─── MEJORA 2: Torneo Multi-PSM ─────────────────────────────────────────────
+        // Preparar las 4 variantes de imagen que se van a someter a OCR:
+        //  A) Alto contraste sin binarizar   — PSM 7 (línea única)
+        //  B) Alto contraste sin binarizar   — PSM 8 (palabra única)
+        //  C) Otsu binarizado                — PSM 6 (bloque uniforme)
+        //  D) Otsu binarizado + invertido    — PSM 13 (texto crudo sin OSD)
+        // Se recogen TODOS los textos crudos, se pasan por extraerPlacaColombiana
+        // y se elige el candidato con mayor score.
 
-        // Crear worker Tesseract con PSM=6 (bloque uniforme de texto)
+        const imgContraste  = await preprocesarImagen(canvasParaPreprocesar, false, false); // A y B
+        const imgOtsu       = await preprocesarImagen(canvasParaPreprocesar, true,  false); // C
+        const imgOtsuInvert = await preprocesarImagen(canvasParaPreprocesar, true,  true);  // D  MEJORA 3
+
+        document.getElementById('ocr-progress').style.width = '25%';
+        document.getElementById('ocr-progress-pct').textContent = '25%';
+
         const worker = await Tesseract.createWorker('eng');
-        await worker.setParameters({
-            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789·- ',
-            tessedit_pageseg_mode: '6' // PSM 6: Uniform text block (más tolerante a puntos y marcos)
-        });
+        const WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
-        let result = await worker.recognize(imagenOptimizada);
-        let textoRaw = result.data.text || '';
-        let confianza = Math.round(result.data.confidence || 0);
+        // Definir los 4 pases del torneo
+        const pases = [
+            { img: imgContraste,  psm: '7',  label: 'PSM7-contraste'  },
+            { img: imgContraste,  psm: '8',  label: 'PSM8-contraste'  },
+            { img: imgOtsu,       psm: '6',  label: 'PSM6-otsu'       },
+            { img: imgOtsuInvert, psm: '13', label: 'PSM13-inv'       },
+        ];
 
-        // Fallback: Si no detectó nada con PSM 6, intentar con binarización Otsu y PSM 11 (Sparse text)
-        if (!textoRaw.trim() || confianza < 20) {
-            const imagenOtsu = await preprocesarImagen(canvasParaPreprocesar, true);
-            await worker.setParameters({ tessedit_pageseg_mode: '11' });
-            const resultFallback = await worker.recognize(imagenOtsu);
-            if (resultFallback.data.text && resultFallback.data.text.trim()) {
-                textoRaw = resultFallback.data.text;
-                confianza = Math.round(resultFallback.data.confidence || 0);
+        const resultadosTorneo = [];
+        const textosCrudos = [];
+        let mejorConfianza = 0;
+
+        for (let i = 0; i < pases.length; i++) {
+            const pase = pases[i];
+            await worker.setParameters({
+                tessedit_char_whitelist: WHITELIST,
+                tessedit_pageseg_mode: pase.psm
+            });
+            const res = await worker.recognize(pase.img);
+            const texto = (res.data.text || '').trim();
+            const conf  = Math.round(res.data.confidence || 0);
+
+            console.log(`🔍 [${pase.label}] conf=${conf}% → "${texto.replace(/\n/g, ' ')}"`);
+
+            if (texto) textosCrudos.push(texto);
+            const candidato = extraerPlacaColombiana(texto);
+            if (candidato) {
+                resultadosTorneo.push({ placa: candidato, conf, label: pase.label });
             }
+            if (conf > mejorConfianza) mejorConfianza = conf;
+
+            // Actualizar barra de progreso
+            const pct = Math.round(((i + 1) / pases.length) * 80) + 10;
+            document.getElementById('ocr-progress').style.width = pct + '%';
+            document.getElementById('ocr-progress-pct').textContent = pct + '%';
         }
 
         await worker.terminate();
 
-        ocrConfianza = confianza;
-        document.getElementById('ocr-confianza-valor').textContent = confianza + '%';
+        document.getElementById('ocr-progress').style.width = '100%';
+        document.getElementById('ocr-progress-pct').textContent = '100%';
 
-        // Mostrar texto crudo
+        // Elegir el mejor candidato del torneo
+        // Criterio: placa válida con mayor confianza OCR en su pase
+        resultadosTorneo.sort((a, b) => b.conf - a.conf);
+        const ganador = resultadosTorneo[0] || null;
+
+        ocrConfianza = ganador ? ganador.conf : mejorConfianza;
+        document.getElementById('ocr-confianza-valor').textContent = ocrConfianza + '%';
+
+        // Mostrar todos los textos crudos obtenidos en el torneo
         const rawInfo = document.getElementById('ocr-raw-info');
         const rawTextEl = document.getElementById('ocr-raw-text');
-        if (textoRaw.trim()) {
+        const resumenCrudo = textosCrudos.join(' | ');
+        if (resumenCrudo.trim()) {
             rawInfo.classList.remove('hidden');
-            rawTextEl.textContent = textoRaw.trim().replace(/\n/g, ' | ');
+            rawTextEl.textContent = resumenCrudo.replace(/\n/g, ' ');
         } else {
             rawInfo.classList.add('hidden');
         }
 
-        // Extraer formato de placa colombiana
-        const placa = extraerPlacaColombiana(textoRaw);
+        const placa = ganador ? ganador.placa : null;
         placaDetectada = placa || '';
 
         ocrStatus.classList.add('hidden');
@@ -551,10 +615,12 @@ async function procesarPlaca() {
                 : placa.slice(0, 3) + ' · ' + placa.slice(3);
             document.getElementById('placa-code-text').textContent = formatoDisplay;
             document.getElementById('placa-corregida').value = placa;
+            console.log(`🏆 Ganador del torneo: ${placa} (${ganador.label}, conf ${ganador.conf}%)`);
         } else {
             document.getElementById('placa-code-text').textContent = 'NO DETECTADA';
             document.getElementById('placa-corregida').value = '';
             document.getElementById('placa-corregida').placeholder = 'Ingresa placa manualmente...';
+            console.log('❌ Ningún pase produjo una placa válida. Textos:', textosCrudos);
         }
 
         resArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
