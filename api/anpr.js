@@ -91,7 +91,7 @@ export default async function handler(req, res) {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        model: 'llama-3.2-11b-vision-preview',
+                        model: 'qwen/qwen3.6-27b',
                         messages: [{ role: 'user', content: 'Hola, responde OK' }],
                         max_tokens: 5
                     })
@@ -164,22 +164,22 @@ export default async function handler(req, res) {
         const groqKey = getEnv('GROQ_API_KEY');
         const openRouterKey = getEnv('OPENROUTER_API_KEY');
 
-        const prompt = `Eres un sistema ANPR de alta precisión especializado en matrículas vehiculares de Colombia.
-Formatos válidos de placas colombianas:
-1. Motos: 3 letras y 2 números (ej: XYQ73, XYO73) O 3 letras, 2 números y 1 letra (ej: WUF62C, MKH87E).
-2. Carros/Camionetas: 3 letras y 3 números (ej: CCC890, ABC123).
+        const prompt = `Eres un sistema OCR especializado en matrículas colombianas.
+Analiza exclusivamente la placa vehicular visible en la imagen.
+No leas textos como COLOMBIA, nombres de ciudades, marcas, stickers ni elementos del vehículo.
+Identifica únicamente la secuencia principal de caracteres de la matrícula.
+Formatos esperados:
+- 3 letras + 2 números
+- 3 letras + 2 números + 1 letra
+- 3 letras + 3 números
+Devuelve SOLO una cadena: ABC123 (sin espacios, puntos, guiones ni explicaciones).
+Si la placa no puede determinarse con suficiente claridad, devuelve: NO_DETECTADA`;
 
-Analiza la imagen adjunta con atención a los caracteres troquelados negros.
-Instrucciones estrictas:
-- Devuelve ÚNICAMENTE los 5 o 6 caracteres de la placa en mayúsculas, sin espacios, sin guiones ni puntos.
-- Omite palabras como "COLOMBIA", "VILLAVICENCIO", "BOGOTA", "MEDELLIN", "CALI", o cualquier texto institucional.
-- Distingue cuidadosamente letras de números (ejemplo: 'X' vs 'K'/'Z', 'Y' vs 'V'/'W', 'O' vs '0', 'I' vs '1', 'S' vs '5', 'B' vs '8').
-- Si no hay una placa identificable, responde exactamente "NO_DETECTADA".
-- NO incluyas explicaciones, markdown, etiquetas ni formato adicional. Solo el código de placa.`;
+        let ultimoErrorGemini = '';
+        let ultimoErrorGroq = '';
 
-        // 1. Probar Google Gemini API
+        // 1. Probar Google Gemini API si está configurado
         if (geminiKey) {
-            let ultimoErrorGemini = '';
             try {
                 const models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
                 let plateResult = null;
@@ -258,47 +258,60 @@ Instrucciones estrictas:
             }
         }
 
-        // 2. Probar Groq Vision API si está configurado
+        // 2. Probar Groq Vision API (Qwen 3.6 27B / Qwen 3.8 27B) si está configurado
         if (groqKey) {
             try {
+                const groqModels = ['qwen/qwen3.6-27b', 'qwen/qwen3.8-27b'];
                 const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
-                const gRes = await fetch(groqUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${groqKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: 'llama-3.2-11b-vision-preview',
-                        messages: [{
-                            role: 'user',
-                            content: [
-                                { type: 'text', text: prompt },
-                                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } }
-                            ]
-                        }],
-                        temperature: 0.1,
-                        max_tokens: 20
-                    })
-                });
 
-                if (gRes.ok) {
-                    const gData = await gRes.json();
-                    const text = gData?.choices?.[0]?.message?.content?.trim() || '';
-                    if (text) {
-                        const cleaned = sanitizarPlaca(text);
-                        return res.status(200).json({
-                            success: true,
-                            placa: cleaned.placa,
-                            valida: cleaned.esValida,
-                            raw: text,
-                            motor: 'IA Groq Vision',
-                            confianza: cleaned.esValida ? 95 : 35
+                for (const model of groqModels) {
+                    try {
+                        const gRes = await fetch(groqUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${groqKey}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                model: model,
+                                messages: [{
+                                    role: 'user',
+                                    content: [
+                                        { type: 'text', text: prompt },
+                                        { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } }
+                                    ]
+                                }],
+                                temperature: 0.05,
+                                max_tokens: 20
+                            })
                         });
+
+                        if (gRes.ok) {
+                            const gData = await gRes.json();
+                            const text = gData?.choices?.[0]?.message?.content?.trim() || '';
+                            if (text) {
+                                const cleaned = sanitizarPlaca(text);
+                                return res.status(200).json({
+                                    success: true,
+                                    placa: cleaned.placa,
+                                    valida: cleaned.esValida,
+                                    raw: text,
+                                    motor: `IA Groq (${model})`,
+                                    confianza: cleaned.esValida ? 95 : 35
+                                });
+                            }
+                        } else {
+                            const errTxt = await gRes.text();
+                            ultimoErrorGroq = `[${model} status ${gRes.status}]: ${errTxt}`;
+                            console.warn('Groq Vision error:', ultimoErrorGroq);
+                        }
+                    } catch (mErr) {
+                        ultimoErrorGroq = `[${model} catch]: ${mErr.message}`;
+                        console.warn('Error llamando a Groq:', mErr.message);
                     }
                 }
             } catch (grqErr) {
-                console.warn('Error procesando con Groq:', grqErr);
+                console.warn('Error general en bloque Groq:', grqErr);
             }
         }
 
@@ -350,8 +363,9 @@ Instrucciones estrictas:
         // Si ninguna API Key está configurada o fallaron
         return res.status(200).json({
             success: false,
-            error: 'No se obtuvo resultado de la IA. Usando Tesseract.js local como respaldo.',
-            geminiError: ultimoErrorGemini || 'Variable GEMINI_API_KEY no encontrada en process.env',
+            error: 'Los motores de IA configurados no pudieron procesar la imagen. Usando Tesseract.js local como respaldo.',
+            geminiError: ultimoErrorGemini || null,
+            groqError: ultimoErrorGroq || null,
             usaLocalFallback: true
         });
 
