@@ -1,3 +1,6 @@
+// Serverless Function para Vercel — /api/anpr
+// Reconocimiento de Placas Asistido por IA Multimodal (Groq Vision — Qwen 3.6 27B)
+
 export const config = {
     api: {
         bodyParser: {
@@ -36,48 +39,8 @@ export default async function handler(req, res) {
         return '';
     };
 
+    // Diagnóstico GET para verificar estado de conexión con Groq
     if (req.method === 'GET') {
-        const geminiKey = getEnv('GEMINI_API_KEY');
-        const keyPrefix = geminiKey ? geminiKey.slice(0, 8) + '...' + geminiKey.slice(-4) : 'NO_CONFIGURADA';
-        
-        let testStatus = 'Sin probar';
-        let testError = null;
-
-        if (geminiKey) {
-            try {
-                const headers = {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': geminiKey
-                };
-                if (geminiKey.startsWith('AQ.')) {
-                    headers['Authorization'] = `Bearer ${geminiKey}`;
-                }
-
-                const urlNoKey = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`;
-                const urlWithKey = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${geminiKey}`;
-                const testUrl = geminiKey.startsWith('AQ.') ? urlNoKey : urlWithKey;
-
-                const tRes = await fetch(testUrl, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: 'Hola, responde OK' }] }]
-                    })
-                });
-                if (tRes.ok) {
-                    const tData = await tRes.json();
-                    testStatus = 'CONECTADO Y FUNCIONANDO';
-                } else {
-                    const tErr = await tRes.text();
-                    testStatus = `ERROR HTTP ${tRes.status}`;
-                    testError = tErr;
-                }
-            } catch (err) {
-                testStatus = 'EXCEPCION';
-                testError = err.message;
-            }
-        }
-
         const groqKey = getEnv('GROQ_API_KEY');
         let groqStatus = 'No configurado';
         let groqError = null;
@@ -115,12 +78,7 @@ export default async function handler(req, res) {
 
         return res.status(200).json({
             endpoint: '/api/anpr',
-            gemini: {
-                configurada: Boolean(geminiKey),
-                preview: keyPrefix,
-                estado: testStatus,
-                detalleError: testError
-            },
+            motorIA: 'Groq Vision (Qwen 3.6 27B)',
             groq: {
                 configurada: Boolean(groqKey),
                 preview: groqKey ? groqKey.slice(0, 8) + '...' : 'NO_CONFIGURADA',
@@ -160,9 +118,7 @@ export default async function handler(req, res) {
             base64Data = parts[1].replace(/[\r\n\s]+/g, '');
         }
 
-        const geminiKey = getEnv('GEMINI_API_KEY');
         const groqKey = getEnv('GROQ_API_KEY');
-        const openRouterKey = getEnv('OPENROUTER_API_KEY');
 
         const prompt = `Eres un sistema OCR especializado en matrículas colombianas.
 Analiza exclusivamente la placa vehicular visible en la imagen.
@@ -175,90 +131,9 @@ Formatos esperados:
 Devuelve SOLO una cadena: ABC123 (sin espacios, puntos, guiones ni explicaciones).
 Si la placa no puede determinarse con suficiente claridad, devuelve: NO_DETECTADA`;
 
-        let ultimoErrorGemini = '';
         let ultimoErrorGroq = '';
 
-        // 1. Probar Google Gemini API si está configurado
-        if (geminiKey) {
-            try {
-                const models = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-1.5-flash'];
-                let plateResult = null;
-                let usedModel = null;
-
-                const headers = {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': geminiKey
-                };
-                if (geminiKey.startsWith('AQ.')) {
-                    headers['Authorization'] = `Bearer ${geminiKey}`;
-                }
-
-                for (const model of models) {
-                    try {
-                        const url = geminiKey.startsWith('AQ.')
-                            ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-                            : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            headers: headers,
-                            body: JSON.stringify({
-                                contents: [{
-                                    parts: [
-                                        { text: prompt },
-                                        {
-                                            inlineData: {
-                                                mimeType: mimeType,
-                                                data: base64Data
-                                            }
-                                        }
-                                    ]
-                                }],
-                                generationConfig: {
-                                    temperature: 0.05,
-                                    maxOutputTokens: 20
-                                }
-                            })
-                        });
-
-                        if (response.ok) {
-                            const data = await response.json();
-                            const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-                            if (text) {
-                                plateResult = text;
-                                usedModel = model;
-                                break;
-                            }
-                        } else {
-                            const errBody = await response.text();
-                            ultimoErrorGemini = `[${model} status ${response.status}]: ${errBody}`;
-                            console.warn(`Gemini ${model} error:`, ultimoErrorGemini);
-                        }
-                    } catch (mErr) {
-                        ultimoErrorGemini = `[${model} catch]: ${mErr.message}`;
-                        console.warn(`Error llamando a Gemini ${model}:`, mErr.message);
-                    }
-                }
-
-                if (plateResult) {
-                    const cleaned = sanitizarPlaca(plateResult);
-                    return res.status(200).json({
-                        success: true,
-                        placa: cleaned.placa,
-                        valida: cleaned.esValida,
-                        raw: plateResult,
-                        motor: `IA Gemini (${usedModel})`,
-                        confianza: cleaned.esValida ? 98 : 40
-                    });
-                } else {
-                    console.warn('Gemini no produjo resultado válido. Último error:', ultimoErrorGemini);
-                }
-            } catch (gErr) {
-                console.warn('Error general en bloque Gemini:', gErr);
-            }
-        }
-
-        // 2. Probar Groq Vision API (Qwen 3.6 27B / Qwen 3.8 27B) si está configurado
+        // Ejecutar Groq Vision API (Qwen 3.6 27B / Qwen 3.8 27B)
         if (groqKey) {
             try {
                 const groqModels = ['qwen/qwen3.6-27b', 'qwen/qwen3.8-27b'];
@@ -315,57 +190,11 @@ Si la placa no puede determinarse con suficiente claridad, devuelve: NO_DETECTAD
             }
         }
 
-        // 3. Probar OpenRouter si está configurado
-        if (openRouterKey) {
-            try {
-                const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${openRouterKey}`,
-                        'Content-Type': 'application/json',
-                        'HTTP-Referer': 'https://parqueadero-unimeta.vercel.app',
-                        'X-Title': 'Parqueadero Unimeta ANPR'
-                    },
-                    body: JSON.stringify({
-                        model: 'google/gemini-2.0-flash-exp:free',
-                        messages: [{
-                            role: 'user',
-                            content: [
-                                { type: 'text', text: prompt },
-                                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } }
-                            ]
-                        }],
-                        temperature: 0.1,
-                        max_tokens: 20
-                    })
-                });
-
-                if (orRes.ok) {
-                    const orData = await orRes.json();
-                    const text = orData?.choices?.[0]?.message?.content?.trim() || '';
-                    if (text) {
-                        const cleaned = sanitizarPlaca(text);
-                        return res.status(200).json({
-                            success: true,
-                            placa: cleaned.placa,
-                            valida: cleaned.esValida,
-                            raw: text,
-                            motor: 'IA OpenRouter',
-                            confianza: cleaned.esValida ? 92 : 30
-                        });
-                    }
-                }
-            } catch (orErr) {
-                console.warn('Error procesando con OpenRouter:', orErr);
-            }
-        }
-
-        // Si ninguna API Key está configurada o fallaron
+        // Si Groq no está configurado o falló, avisar para usar fallback local
         return res.status(200).json({
             success: false,
-            error: 'Los motores de IA configurados no pudieron procesar la imagen. Usando Tesseract.js local como respaldo.',
-            geminiError: ultimoErrorGemini || null,
-            groqError: ultimoErrorGroq || null,
+            error: 'Groq Vision no pudo procesar la imagen o no está configurado. Usando Tesseract.js local como respaldo.',
+            groqError: ultimoErrorGroq || (groqKey ? 'No se obtuvo respuesta concluyente' : 'GROQ_API_KEY no encontrada en process.env'),
             usaLocalFallback: true
         });
 

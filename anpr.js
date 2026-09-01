@@ -635,24 +635,21 @@ function votarConsenso(resultadosTorneo) {
                 mejorConteo = conteo[c];
                 mejorConf = pesoConf[c];
                 mejorChar = c;
-            }
-        }
         resultado += mejorChar;
     }
 
     return esPlacaValida(resultado) ? resultado : mejorGrupo[0].placa;
 }
 
-// ===== 7C. Reconocimiento Híbrido Asistido por IA Multimodal (Gemini Vision / Vercel API) =====
-async function consultarIAGemini(cropDataUrl, rawDataUrl) {
+// ===== 7C. Reconocimiento por IA Multimodal (Groq Vision — Qwen 3.6 27B) =====
+async function consultarIAGroq(cropDataUrl, rawDataUrl) {
     try {
-        // Enviar la imagen completa a Gemini (su visión multimodal lee la placa en su contexto)
         const payload = {
             image: rawDataUrl || cropDataUrl
         };
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seg timeout
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seg timeout
 
         const response = await fetch('/api/anpr', {
             method: 'POST',
@@ -678,12 +675,12 @@ async function consultarIAGemini(cropDataUrl, rawDataUrl) {
         }
         return null;
     } catch (e) {
-        console.warn('IA Serverless no disponible (usando OCR Local):', e.message);
+        console.warn('IA Serverless no disponible (usando OCR Local como respaldo):', e.message);
         return null;
     }
 }
 
-// ===== 8. Procesamiento OCR Híbrido (IA Gemini + Tesseract.js Multi-Paso) =====
+// ===== 8. Procesamiento ANPR con Prioridad Estricta: 1° Groq Vision → 2° Tesseract.js Fallback =====
 async function procesarPlaca() {
     if (!imagenCapturada) {
         await uiAlert('Error', 'No hay ninguna imagen cargada para procesar.', '⚠️');
@@ -696,6 +693,8 @@ async function procesarPlaca() {
     const verifCard = document.getElementById('verificacion-resultado');
     const btnProcesar = document.getElementById('btn-procesar');
     const badgeTipo = document.getElementById('ocr-badge-tipo');
+    const rawInfo = document.getElementById('ocr-raw-info');
+    const rawTextEl = document.getElementById('ocr-raw-text');
 
     resArea.classList.remove('hidden');
     ocrStatus.classList.remove('hidden');
@@ -703,43 +702,79 @@ async function procesarPlaca() {
     verifCard.classList.add('hidden');
 
     btnProcesar.disabled = true;
-    btnProcesar.textContent = '⏳ Extrayendo con IA / OCR...';
+    btnProcesar.textContent = '🤖 Analizando con IA (Groq)...';
 
-    document.getElementById('ocr-progress').style.width = '0%';
-    document.getElementById('ocr-progress-pct').textContent = '0%';
+    document.getElementById('ocr-progress').style.width = '30%';
+    document.getElementById('ocr-progress-pct').textContent = '30%';
 
     try {
         let canvasParaPreprocesar = imagenCapturada;
 
-        // Detección de región amarilla (localizar y recortar la zona de caracteres de la placa)
+        // Detección de región de placa para miniaturas de depuración
         const imgTmp = new Image();
         await new Promise((r) => { imgTmp.onload = r; imgTmp.src = imagenCapturada; });
         const regionPlaca = detectarRegionPlacaAmarilla(imgTmp);
         if (regionPlaca) {
             canvasParaPreprocesar = regionPlaca;
-            console.log('✅ Placa localizada y recortada (zona de caracteres únicamente).');
         }
 
-        // Obtener dataURL del recorte para enviar a la IA
         const cropDataUrl = typeof canvasParaPreprocesar === 'string'
             ? canvasParaPreprocesar
             : canvasParaPreprocesar.toDataURL('image/png');
 
-        // Lanzar consulta de IA Gemini en paralelo mientras se preparan los filtros locales
-        const promesaIA = consultarIAGemini(cropDataUrl, imagenCapturada);
-
-        // Preparar las variantes de imagen para el torneo OCR local (7 pases)
+        // Mostrar miniaturas en panel de depuración
         const imgContraste = await preprocesarImagen(canvasParaPreprocesar, false, false);
         const imgOtsu = await preprocesarImagen(canvasParaPreprocesar, true, false);
         const imgOtsuInvert = await preprocesarImagen(canvasParaPreprocesar, true, true);
-        const imgSharpContr = await preprocesarImagen(canvasParaPreprocesar, false, false, true);
-        const imgSharpOtsu = await preprocesarImagen(canvasParaPreprocesar, true, false, true);
-
-        // Mostrar miniaturas en el panel de depuración visual (FASE 1)
         mostrarDebugVisual(canvasParaPreprocesar, imgContraste, imgOtsu, imgOtsuInvert);
 
-        document.getElementById('ocr-progress').style.width = '20%';
-        document.getElementById('ocr-progress-pct').textContent = '20%';
+        // =========================================================================
+        // PASO 1: CONSULTAR GROQ VISION (Qwen 3.6 27B) COMO PRIORIDAD PRINCIPAL
+        // =========================================================================
+        console.log('🚀 [PRIORIDAD 1] Consultando Groq Vision API...');
+        const resultadoIA = await consultarIAGroq(cropDataUrl, imagenCapturada);
+
+        // Si Groq Vision devolvió una placa válida colombiana:
+        if (resultadoIA && resultadoIA.valida && esPlacaValida(resultadoIA.placa)) {
+            const placaFinal = resultadoIA.placa;
+            const origenMotor = resultadoIA.motor || '🤖 IA Groq Vision';
+            ocrConfianza = resultadoIA.confianza || 95;
+            placaDetectada = placaFinal;
+
+            document.getElementById('ocr-progress').style.width = '100%';
+            document.getElementById('ocr-progress-pct').textContent = '100%';
+
+            if (badgeTipo) badgeTipo.textContent = origenMotor;
+            document.getElementById('ocr-confianza-valor').textContent = ocrConfianza + '%';
+
+            // Mostrar texto crudo de la IA
+            rawInfo.classList.remove('hidden');
+            rawTextEl.textContent = `[${origenMotor}]: ${resultadoIA.raw || placaFinal}`;
+
+            const formatoDisplay = placaFinal.slice(0, 3) + ' · ' + placaFinal.slice(3);
+            document.getElementById('placa-code-text').textContent = formatoDisplay;
+            document.getElementById('placa-corregida').value = placaFinal;
+
+            ocrStatus.classList.add('hidden');
+            placaBox.classList.remove('hidden');
+            btnProcesar.disabled = false;
+            btnProcesar.textContent = '⚡ Extraer Placa con OCR';
+            resArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            console.log(`✅ [ÉXITO IA] Placa resuelta por ${origenMotor}: ${placaFinal}. Tesseract omitido.`);
+            return; // Terminar aquí sin ejecutar Tesseract
+        }
+
+        // =========================================================================
+        // PASO 2: FALLBACK LOCAL CON TESSERACT.JS (7 PASES + CONSENSO)
+        // =========================================================================
+        console.log('⚠️ [PRIORIDAD 2] IA no disponible o no concluyente. Iniciando OCR Local (Tesseract.js)...');
+        btnProcesar.textContent = '⏳ Ejecutando OCR de respaldo...';
+        document.getElementById('ocr-progress').style.width = '40%';
+        document.getElementById('ocr-progress-pct').textContent = '40%';
+
+        const imgSharpContr = await preprocesarImagen(canvasParaPreprocesar, false, false, true);
+        const imgSharpOtsu = await preprocesarImagen(canvasParaPreprocesar, true, false, true);
 
         // Instanciar Worker con modelo LSTM de alta precisión (tessdata_best)
         const worker = await Tesseract.createWorker('eng', 1, {
@@ -776,8 +811,6 @@ async function procesarPlaca() {
             const texto = (res.data.text || '').trim();
             const conf = Math.round(res.data.confidence || 0);
 
-            console.log(`🔍 [${pase.label}] conf=${conf}% → "${texto.replace(/\n/g, ' ')}"`);
-
             if (texto) textosCrudos.push(texto);
             const candidato = extraerPlacaColombiana(texto);
             if (candidato) {
@@ -793,50 +826,28 @@ async function procesarPlaca() {
             }
             if (conf > mejorConfianza) mejorConfianza = conf;
 
-            const pct = Math.round(((i + 1) / pases.length) * 70) + 20;
+            const pct = Math.round(((i + 1) / pases.length) * 55) + 40;
             document.getElementById('ocr-progress').style.width = pct + '%';
             document.getElementById('ocr-progress-pct').textContent = pct + '%';
         }
 
         await worker.terminate();
 
-        // Esperar el resultado de la IA (si aún no terminó)
-        const resultadoIA = await promesaIA;
-
         document.getElementById('ocr-progress').style.width = '100%';
         document.getElementById('ocr-progress-pct').textContent = '100%';
 
-        // Tabla de depuración en consola
-        if (resultadosTorneo.length > 0) {
-            console.table(resultadosTorneo.map(r => ({
-                pase: r.label,
-                crudo: r.rawText.replace(/\n/g, ' ').slice(0, 40),
-                bruto: r.bruto,
-                corregido: r.placa,
-                confianza: r.conf + '%'
-            })));
-        }
-
-        // Selección por consenso de pases locales
+        // Votación por consenso de pases locales
         const placaConsensoLocal = votarConsenso(resultadosTorneo);
 
         let placaFinal = '';
-        let origenMotor = '';
+        let origenMotor = '⚡ Tesseract.js (Consenso)';
 
-        if (resultadoIA && resultadoIA.valida && esPlacaValida(resultadoIA.placa)) {
-            // IA Gemini tiene máxima prioridad en visión multimodal
-            placaFinal = resultadoIA.placa;
-            ocrConfianza = resultadoIA.confianza || 98;
-            origenMotor = resultadoIA.motor || '🤖 IA Gemini Vision';
-            console.log(`✨ [DECISIÓN] Placa adoptada por ${origenMotor}: ${placaFinal}`);
-        } else if (placaConsensoLocal) {
+        if (placaConsensoLocal) {
             placaFinal = placaConsensoLocal;
             const acuerdos = resultadosTorneo.filter(r => r.placa === placaFinal).length;
             const confConsenso = Math.round((acuerdos / pases.length) * 100);
             const confRawMejor = Math.max(...resultadosTorneo.filter(r => r.placa === placaFinal).map(r => r.conf));
             ocrConfianza = Math.max(confConsenso, confRawMejor);
-            origenMotor = '⚡ Tesseract.js (Consenso)';
-            console.log(`⚡ [DECISIÓN] Placa adoptada por ${origenMotor}: ${placaFinal} (${ocrConfianza}%)`);
         } else {
             placaFinal = '';
             ocrConfianza = 0;
@@ -844,18 +855,11 @@ async function procesarPlaca() {
         }
 
         // Actualizar UI
-        if (badgeTipo) {
-            badgeTipo.textContent = origenMotor;
-        }
+        if (badgeTipo) badgeTipo.textContent = origenMotor;
         document.getElementById('ocr-confianza-valor').textContent = ocrConfianza + '%';
 
-        // Mostrar textos crudos obtenidos
-        const rawInfo = document.getElementById('ocr-raw-info');
-        const rawTextEl = document.getElementById('ocr-raw-text');
-        let resumenCrudo = textosCrudos.join(' | ');
-        if (resultadoIA && resultadoIA.raw) {
-            resumenCrudo = `[IA]: ${resultadoIA.raw} | ` + resumenCrudo;
-        }
+        // Mostrar textos crudos de depuración
+        const resumenCrudo = textosCrudos.join(' | ');
         if (resumenCrudo.trim()) {
             rawInfo.classList.remove('hidden');
             rawTextEl.textContent = resumenCrudo.replace(/\n/g, ' ');
@@ -880,9 +884,9 @@ async function procesarPlaca() {
         resArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     } catch (err) {
-        console.error('Error durante el OCR:', err);
+        console.error('Error general en procesarPlaca:', err);
         ocrStatus.classList.add('hidden');
-        await uiAlert('Error en OCR', 'Ocurrió un error al procesar la imagen: ' + err.message, '❌');
+        await uiAlert('Error', 'Ocurrió un fallo durante el procesamiento de la imagen.', '❌');
     } finally {
         btnProcesar.disabled = false;
         btnProcesar.textContent = '⚡ Extraer Placa con OCR';
