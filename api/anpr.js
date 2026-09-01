@@ -39,32 +39,66 @@ export default async function handler(req, res) {
         return '';
     };
 
-    // Diagnóstico GET para verificar estado de conexión con Groq
+    // Diagnóstico GET para verificar estado de conexión y modelos de Groq
     if (req.method === 'GET') {
         const groqKey = getEnv('GROQ_API_KEY');
         let groqStatus = 'No configurado';
         let groqError = null;
+        let modelosGroq = [];
+        let testVisionStatus = 'Sin probar';
+        let testVisionError = null;
 
         if (groqKey) {
             try {
-                const gTest = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${groqKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: 'qwen/qwen3.6-27b',
-                        messages: [{ role: 'user', content: 'Hola, responde OK' }],
-                        max_tokens: 5
-                    })
+                // 1. Obtener lista real de modelos disponibles en la cuenta de Groq
+                const mRes = await fetch('https://api.groq.com/openai/v1/models', {
+                    headers: { 'Authorization': `Bearer ${groqKey}` }
                 });
-                if (gTest.ok) {
+                if (mRes.ok) {
+                    const mData = await mRes.json();
+                    modelosGroq = (mData?.data || []).map(m => m.id);
                     groqStatus = 'CONECTADO Y FUNCIONANDO';
                 } else {
-                    const gErrTxt = await gTest.text();
-                    groqStatus = `ERROR HTTP ${gTest.status}`;
-                    groqError = gErrTxt;
+                    groqStatus = `ERROR HTTP ${mRes.status}`;
+                    groqError = await mRes.text();
+                }
+
+                // 2. Probar visión real con una imagen 1x1 transparente
+                const testBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+                const visionCandidates = ['qwen/qwen3.6-27b', 'llama-3.2-11b-vision-preview', 'llama-3.2-90b-vision-preview', 'qwen/qwen3.8-27b'];
+                
+                for (const vModel of visionCandidates) {
+                    try {
+                        const vRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${groqKey}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                model: vModel,
+                                messages: [{
+                                    role: 'user',
+                                    content: [
+                                        { type: 'text', text: 'Responde OK' },
+                                        { type: 'image_url', image_url: { url: `data:image/png;base64,${testBase64}` } }
+                                    ]
+                                }],
+                                max_tokens: 5
+                            })
+                        });
+                        if (vRes.ok) {
+                            testVisionStatus = `FUNCIONANDO con modelo [${vModel}]`;
+                            testVisionError = null;
+                            break;
+                        } else {
+                            testVisionStatus = `Fallo en [${vModel}] HTTP ${vRes.status}`;
+                            testVisionError = await vRes.text();
+                        }
+                    } catch (vErr) {
+                        testVisionStatus = `Excepción en [${vModel}]`;
+                        testVisionError = vErr.message;
+                    }
                 }
             } catch (err) {
                 groqStatus = 'EXCEPCION';
@@ -72,20 +106,16 @@ export default async function handler(req, res) {
             }
         }
 
-        const varsDisponibles = Object.keys(process.env).filter(
-            k => !k.startsWith('npm_') && !k.startsWith('VERCEL_') && !k.startsWith('AWS_') && !k.startsWith('PATH') && !k.startsWith('NODE_')
-        );
-
         return res.status(200).json({
             endpoint: '/api/anpr',
-            motorIA: 'Groq Vision (Qwen 3.6 27B)',
             groq: {
                 configurada: Boolean(groqKey),
                 preview: groqKey ? groqKey.slice(0, 8) + '...' : 'NO_CONFIGURADA',
-                estado: groqStatus,
-                detalleError: groqError
+                estadoGeneral: groqStatus,
+                estadoVision: testVisionStatus,
+                errorVision: testVisionError
             },
-            variablesEncontradasEnVercel: varsDisponibles
+            modelosDisponiblesEnGroq: modelosGroq
         });
     }
 
@@ -125,18 +155,24 @@ Analiza exclusivamente la placa vehicular visible en la imagen.
 No leas textos como COLOMBIA, nombres de ciudades, marcas, stickers ni elementos del vehículo.
 Identifica únicamente la secuencia principal de caracteres de la matrícula.
 Formatos esperados:
-- 3 letras + 2 números
-- 3 letras + 2 números + 1 letra
-- 3 letras + 3 números
-Devuelve SOLO una cadena: ABC123 (sin espacios, puntos, guiones ni explicaciones).
-Si la placa no puede determinarse con suficiente claridad, devuelve: NO_DETECTADA`;
+- 3 letras + 2 números (ej: XYQ73)
+- 3 letras + 2 números + 1 letra (ej: WUF62C, MKH87E)
+- 3 letras + 3 números (ej: CCC890)
+Devuelve SOLO la secuencia de la placa (ej: WUF62C) sin espacios ni símbolos.
+Si no puedes identificarla, responde: NO_DETECTADA`;
 
         let ultimoErrorGroq = '';
 
-        // Ejecutar Groq Vision API (Qwen 3.6 27B / Qwen 3.8 27B)
+        // Ejecutar Groq Vision API probando los modelos de visión activos
         if (groqKey) {
             try {
-                const groqModels = ['qwen/qwen3.6-27b', 'qwen/qwen3.8-27b'];
+                const groqModels = [
+                    'qwen/qwen3.6-27b',
+                    'llama-3.2-11b-vision-preview',
+                    'llama-3.2-90b-vision-preview',
+                    'qwen/qwen3.8-27b',
+                    'meta-llama/llama-4-scout-17b-vision'
+                ];
                 const groqUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
                 for (const model of groqModels) {

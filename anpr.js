@@ -674,8 +674,10 @@ async function consultarIAGroq(cropDataUrl, rawDataUrl) {
         if (data && data.success && data.valida && data.placa) {
             console.log(`🤖 [${data.motor || 'IA Vision'}] Detectó placa con éxito:`, data.placa);
             return data;
+        } else {
+            console.warn('⚠️ /api/anpr no devolvió placa válida:', data?.error || data?.groqError || 'Respuesta no concluyente');
         }
-        return null;
+        return data;
     } catch (e) {
         console.warn('IA Serverless no disponible (usando OCR Local como respaldo):', e.message);
         return null;
