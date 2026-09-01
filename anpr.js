@@ -272,13 +272,14 @@ function detectarRegionPlacaAmarilla(imgElement) {
     }
 
     // Si se encontró un cluster amarillo con suficiente densidad (>15%)
-    if (maxDensity > 0.15 && bestW > 50 && bestH > 25) {
-        // MEJORA 1: Recorte interior — eliminar bordes donde dice "COLOMBIA" y ciudad
-        // Las placas colombianas tienen texto institucional en el 20% superior e inferior.
-        // Recortamos solo el 65% central vertical (zona de caracteres) y 90% horizontal.
-        const innerTrimX = Math.round(bestW * 0.05);  // 5% cada lado horizontal
-        const innerTrimY = Math.round(bestH * 0.20);  // 20% top (COLOMBIA) + 15% bottom (ciudad)
-        const innerTrimYBot = Math.round(bestH * 0.15);
+    if (maxDensity > 0.15 && bestW > 40 && bestH > 20) {
+        // Recorte interior adaptativo:
+        // Si la placa es grande (>100px alto), se puede recortar el borde institucional (15% top / 10% bottom).
+        // Si la placa es pequeña (<100px alto, foto lejana), el recorte debe ser mínimo (4% top / 4% bottom) para no cortar las letras superiores.
+        const esGrande = bestH >= 100;
+        const innerTrimX = Math.round(bestW * (esGrande ? 0.05 : 0.02));
+        const innerTrimY = Math.round(bestH * (esGrande ? 0.16 : 0.04));
+        const innerTrimYBot = Math.round(bestH * (esGrande ? 0.12 : 0.04));
 
         const cropX = Math.max(0, bestX + innerTrimX);
         const cropY = Math.max(0, bestY + innerTrimY);
@@ -299,7 +300,7 @@ function detectarRegionPlacaAmarilla(imgElement) {
         cropCanvas.height = cropH;
         const cropCtx = cropCanvas.getContext('2d');
         cropCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-        console.log(`✂️ Recorte interior: ${cropW}x${cropH}px (eliminado borde institucional)`);
+        console.log(`✂️ Recorte interior adaptativo: ${cropW}x${cropH}px (${esGrande ? 'cercana' : 'lejana'})`);
         return cropCanvas;
     }
 
@@ -503,7 +504,7 @@ function extraerPlacaColombiana(textoOCR) {
     // Carro estándar: 3 letras + 3 números (ej: CCC890)
     const regexEstandar = /^[A-Z]{3}[0-9]{3}$/;
 
-    // 1) corregirYValidar: ahora devuelve un objeto { corregido, bruto }
+    // 1) corregirYValidar: normaliza según gramática de placas colombianas
     function corregirYValidar(str) {
         if (!str || str.length < 5 || str.length > 6) return null;
         const len = str.length;
@@ -512,10 +513,29 @@ function extraerPlacaColombiana(textoOCR) {
             const c = str[pos];
             if (pos < 3) {
                 // Primeros 3 caracteres deben ser letras
-                const lMap = { '0': 'O', '1': 'I', '5': 'S', '8': 'B', '2': 'Z', '6': 'G', '7': 'T', '4': 'A' };
-                cand += lMap[c] || c;
+                const lMap = { 
+                    '0': 'O', '1': 'I', '5': 'S', '8': 'B', '2': 'Z', '6': 'G', '7': 'T', '4': 'A'
+                };
+                let mapped = lMap[c] || c;
+
+                // Reglas heurísticas de placas troqueladas colombianas:
+                // Si en pos 0 lee '2', 'Z' o 'K' y el segundo carácter es 'W', 'Y' o 'V', casi con certeza el primero es 'X'
+                if (pos === 0 && (c === '2' || c === 'Z' || c === 'K') && str.length >= 2) {
+                    const next = str[1];
+                    if (next === 'W' || next === 'Y' || next === 'V' || next === 'U') {
+                        mapped = 'X';
+                    }
+                }
+                // Si en pos 1 lee 'W' o 'V' y el primero fue 'X' o 'Z', es 'Y' (ej: XYQ)
+                if (pos === 1 && (c === 'W' || c === 'V')) {
+                    if (cand[0] === 'X' || str[0] === 'Z' || str[0] === '2' || str[0] === 'K') {
+                        mapped = 'Y';
+                    }
+                }
+
+                cand += mapped;
             } else if (pos === 5 && len === 6 && /[A-Z]/.test(c)) {
-                // Posición 5 en moto nueva (6 chars) es letra
+                // Posición 5 en moto nueva (6 chars) es letra (ej: WUF62C, XYQ73F)
                 cand += c;
             } else {
                 // Posiciones numéricas
@@ -679,7 +699,15 @@ async function procesarPlaca() {
         document.getElementById('ocr-progress').style.width = '25%';
         document.getElementById('ocr-progress-pct').textContent = '25%';
 
-        const worker = await Tesseract.createWorker('eng');
+        // Instanciar Worker con modelo LSTM de alta precisión (tessdata_best)
+        const worker = await Tesseract.createWorker('eng', 1, {
+            langPath: 'https://tessdata.projectnaptha.com/4.0.0_best',
+            logger: m => {
+                if (m.status && m.status.includes('loading')) {
+                    console.log(`🧠 [Tesseract Best]: ${m.status} ${Math.round((m.progress || 0) * 100)}%`);
+                }
+            }
+        });
         const WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
         const pases = [
