@@ -164,6 +164,23 @@ function mostrarPreview(dataUrl, etiquetaModo) {
     document.getElementById('badge-modo').textContent = etiquetaModo;
 }
 
+// ===== 5B. Mostrar Debug Visual (FASE 1) =====
+function mostrarDebugVisual(canvasRecorte, imgContraste, imgOtsu, imgOtsuInvert) {
+    const box = document.getElementById('debug-visual-box');
+    if (!box) return;
+
+    const recorteDataUrl = typeof canvasRecorte === 'string'
+        ? canvasRecorte
+        : canvasRecorte.toDataURL('image/png');
+
+    document.getElementById('debug-img-recorte').src = recorteDataUrl;
+    document.getElementById('debug-img-contraste').src = imgContraste;
+    document.getElementById('debug-img-otsu').src = imgOtsu;
+    document.getElementById('debug-img-otsu-inv').src = imgOtsuInvert;
+
+    box.classList.remove('hidden');
+}
+
 // Helper: Conversión de RGB a HSL
 function rgbToHsl(r, g, b) {
     r /= 255; g /= 255; b /= 255;
@@ -579,6 +596,9 @@ async function procesarPlaca() {
         const imgContraste  = await preprocesarImagen(canvasParaPreprocesar, false, false);
         const imgOtsu       = await preprocesarImagen(canvasParaPreprocesar, true,  false);
         const imgOtsuInvert = await preprocesarImagen(canvasParaPreprocesar, true,  true);
+
+        // Mostrar miniaturas en el panel de depuración visual (FASE 1)
+        mostrarDebugVisual(canvasParaPreprocesar, imgContraste, imgOtsu, imgOtsuInvert);
 
         document.getElementById('ocr-progress').style.width = '25%';
         document.getElementById('ocr-progress-pct').textContent = '25%';

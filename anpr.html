@@ -143,6 +143,29 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Debug Visual (Imágenes enviadas al torneo OCR) -->
+                <div id="debug-visual-box" class="debug-visual-box hidden">
+                    <h4>🔍 Depuración Visual — Recortes y Filtros Enviados a Tesseract</h4>
+                    <div class="debug-visual-grid">
+                        <div class="debug-visual-item">
+                            <span>Recorte de Placa</span>
+                            <img id="debug-img-recorte" src="" alt="Recorte">
+                        </div>
+                        <div class="debug-visual-item">
+                            <span>Contraste (PSM 7/8)</span>
+                            <img id="debug-img-contraste" src="" alt="Contraste">
+                        </div>
+                        <div class="debug-visual-item">
+                            <span>Otsu (PSM 6)</span>
+                            <img id="debug-img-otsu" src="" alt="Otsu">
+                        </div>
+                        <div class="debug-visual-item">
+                            <span>Otsu Invertido (PSM 13)</span>
+                            <img id="debug-img-otsu-inv" src="" alt="Otsu Invertido">
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Tarjeta de Estado de Pago -->
