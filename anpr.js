@@ -201,13 +201,19 @@ function rgbToHsl(r, g, b) {
     return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
 }
 
-// ===== 5B. Detección Inteligente de Placa Amarilla por Densidad de Color =====
+// ===== 5B. Detección Inteligente de Región de Placa Amarilla (Bounding Box) =====
 function detectarRegionPlacaAmarilla(imgElement) {
     const origW = imgElement.naturalWidth || imgElement.width;
     const origH = imgElement.naturalHeight || imgElement.height;
 
-    // Redimensionar para análisis rápido de densidad
-    const scale = Math.min(1, 600 / origW);
+    // Si la imagen ya es pequeña o tiene proporción de placa (1.3 a 2.5), no recortar
+    const aspect = origW / origH;
+    if (origW < 400 || (aspect >= 1.2 && aspect <= 2.8 && origH < 350)) {
+        console.log('ℹ️ Imagen ya viene en primer plano de placa, se usa completa.');
+        return null;
+    }
+
+    const scale = Math.min(1, 400 / origW);
     const w = Math.round(origW * scale);
     const h = Math.round(origH * scale);
 
@@ -220,88 +226,58 @@ function detectarRegionPlacaAmarilla(imgElement) {
     const imgData = ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
 
-    // Crear mapa de cuadrícula (bloques de 10x10 px) para encontrar la mayor densidad de amarillo
-    const blockSize = 10;
-    const cols = Math.ceil(w / blockSize);
-    const rows = Math.ceil(h / blockSize);
-    const grid = Array.from({ length: rows }, () => new Array(cols).fill(0));
+    let minX = w, minY = h, maxX = 0, maxY = 0;
+    let yellowCount = 0;
 
     for (let y = 0; y < h; y++) {
-        const row = Math.floor(y / blockSize);
         for (let x = 0; x < w; x++) {
-            const col = Math.floor(x / blockSize);
             const idx = (y * w + x) * 4;
             const [hue, sat, lig] = rgbToHsl(data[idx], data[idx + 1], data[idx + 2]);
-            // Rango amarillo de placa colombiana
-            if (hue >= 28 && hue <= 70 && sat >= 35 && lig >= 25 && lig <= 85) {
-                grid[row][col]++;
+            // Rango amarillo de placa
+            if (hue >= 28 && hue <= 72 && sat >= 30 && lig >= 20 && lig <= 85) {
+                yellowCount++;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
             }
         }
     }
 
-    // Encontrar el rectángulo continuo con mayor concentración de bloques amarillos
-    let bestX = 0, bestY = 0, bestW = 0, bestH = 0, maxDensity = 0;
+    const totalPixels = w * h;
+    const yellowRatio = yellowCount / totalPixels;
 
-    // Ventanas deslizantes representativas de placas (anchos de 20% a 95% del cuadro)
-    for (let winCols = Math.floor(cols * 0.20); winCols <= Math.floor(cols * 0.95); winCols += 2) {
-        // Relación de aspecto de placa (ancho/alto entre 1.1 y 2.6)
-        for (let winRows = Math.floor(winCols / 2.6); winRows <= Math.floor(winCols / 1.05); winRows += 2) {
-            if (winRows >= rows) continue;
-
-            for (let r = 0; r <= rows - winRows; r += 2) {
-                for (let c = 0; c <= cols - winCols; c += 2) {
-                    let count = 0;
-                    for (let dr = 0; dr < winRows; dr++) {
-                        for (let dc = 0; dc < winCols; dc++) {
-                            count += grid[r + dr][c + dc];
-                        }
-                    }
-                    const area = winRows * winCols * (blockSize * blockSize);
-                    const density = count / area;
-
-                    if (count > 200 && density > maxDensity) {
-                        maxDensity = density;
-                        bestX = Math.floor(c * blockSize / scale);
-                        bestY = Math.floor(r * blockSize / scale);
-                        bestW = Math.floor(winCols * blockSize / scale);
-                        bestH = Math.floor(winRows * blockSize / scale);
-                    }
-                }
-            }
-        }
+    // Si más del 30% de la imagen ya es amarilla, es un primer plano: usar completa
+    if (yellowRatio > 0.30) {
+        console.log('ℹ️ Gran densidad amarilla detectada (primer plano), usando imagen completa.');
+        return null;
     }
 
-    // Si se encontró un cluster amarillo con suficiente densidad (>15%)
-    if (maxDensity > 0.12 && bestW > 40 && bestH > 20) {
-        // Si la foto ya está enfocada casi totalmente en la placa (más del 60% del ancho/alto)
-        const esPrimerPlano = (bestW / origW) > 0.65 && (bestH / origH) > 0.40;
-        
-        // Recorte interior seguro (no comerse las letras superiores o inferiores)
-        const innerTrimX = esPrimerPlano ? 0 : Math.round(bestW * 0.03);
-        const innerTrimY = esPrimerPlano ? Math.round(bestH * 0.02) : Math.round(bestH * 0.06);
-        const innerTrimYBot = esPrimerPlano ? Math.round(bestH * 0.02) : Math.round(bestH * 0.05);
+    // Si hay suficiente amarillo para formar una placa delimitada
+    if (yellowCount > 200 && maxX > minX && maxY > minY) {
+        const boxW = (maxX - minX) / scale;
+        const boxH = (maxY - minY) / scale;
+        const boxX = minX / scale;
+        const boxY = minY / scale;
 
-        const cropX = Math.max(0, bestX + innerTrimX);
-        const cropY = Math.max(0, bestY + innerTrimY);
-        const cropW = Math.min(origW - cropX, bestW - innerTrimX * 2);
-        const cropH = Math.min(origH - cropY, bestH - innerTrimY - innerTrimYBot);
+        // Validar tamaño mínimo y aspecto
+        if (boxW >= 120 && boxH >= 50 && (boxW / boxH) >= 1.1) {
+            // Añadir 5% de margen de seguridad
+            const padX = Math.round(boxW * 0.05);
+            const padY = Math.round(boxH * 0.05);
 
-        if (cropW < 40 || cropH < 20) {
-            // Fallback: usar la region completa
-            const cropCanvas2 = document.createElement('canvas');
-            cropCanvas2.width = Math.min(origW, bestW);
-            cropCanvas2.height = Math.min(origH, bestH);
-            cropCanvas2.getContext('2d').drawImage(imgElement, bestX, bestY, bestW, bestH, 0, 0, cropCanvas2.width, cropCanvas2.height);
-            return cropCanvas2;
+            const cropX = Math.max(0, boxX - padX);
+            const cropY = Math.max(0, boxY - padY);
+            const cropW = Math.min(origW - cropX, boxW + padX * 2);
+            const cropH = Math.min(origH - cropY, boxH + padY * 2);
+
+            const cropCanvas = document.createElement('canvas');
+            cropCanvas.width = cropW;
+            cropCanvas.height = cropH;
+            cropCanvas.getContext('2d').drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+            console.log(`✂️ Recorte de placa acotado: ${cropW}x${cropH}px`);
+            return cropCanvas;
         }
-
-        const cropCanvas = document.createElement('canvas');
-        cropCanvas.width = cropW;
-        cropCanvas.height = cropH;
-        const cropCtx = cropCanvas.getContext('2d');
-        cropCtx.drawImage(imgElement, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
-        console.log(`✂️ Recorte de placa: ${cropW}x${cropH}px (primerPlano: ${esPrimerPlano})`);
-        return cropCanvas;
     }
 
     return null;
@@ -670,13 +646,13 @@ function votarConsenso(resultadosTorneo) {
 // ===== 7C. Reconocimiento Híbrido Asistido por IA Multimodal (Gemini Vision / Vercel API) =====
 async function consultarIAGemini(cropDataUrl, rawDataUrl) {
     try {
+        // Enviar la imagen completa a Gemini (su visión multimodal lee la placa en su contexto)
         const payload = {
-            image: cropDataUrl || rawDataUrl,
-            rawImage: rawDataUrl || cropDataUrl
+            image: rawDataUrl || cropDataUrl
         };
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 9000); // 9 seg timeout
+        const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 seg timeout
 
         const response = await fetch('/api/anpr', {
             method: 'POST',
@@ -688,18 +664,21 @@ async function consultarIAGemini(cropDataUrl, rawDataUrl) {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-            console.warn('API /api/anpr no respondió 200:', response.status);
+            const errTxt = await response.text();
+            console.warn('API /api/anpr respondió con error:', response.status, errTxt);
             return null;
         }
 
         const data = await response.json();
+        console.log('📡 Respuesta de /api/anpr:', data);
+
         if (data && data.success && data.valida && data.placa) {
-            console.log(`🤖 [${data.motor || 'IA Vision'}] Detectó placa con éxito:`, data.placa, data);
+            console.log(`🤖 [${data.motor || 'IA Vision'}] Detectó placa con éxito:`, data.placa);
             return data;
         }
         return null;
     } catch (e) {
-        console.info('IA Serverless no disponible (usando OCR Local):', e.message);
+        console.warn('IA Serverless no disponible (usando OCR Local):', e.message);
         return null;
     }
 }
