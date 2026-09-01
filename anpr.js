@@ -105,7 +105,7 @@ function activarArchivo() {
     detenerCamara();
 }
 
-// ===== 3. Capturar Foto desde la Cámara =====
+// ===== 3. Capturar Foto desde la Cámara (Recorte ROI) =====
 function capturarFoto() {
     const video = document.getElementById('video-preview');
     if (!video || !video.videoWidth) {
@@ -114,16 +114,25 @@ function capturarFoto() {
     }
 
     const canvas = document.getElementById('canvas-captura');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const fullW = video.videoWidth;
+    const fullH = video.videoHeight;
+
+    // Recortar SOLO la región del scan-target-box (75% ancho, 45% alto, centrado)
+    const roiW = Math.round(fullW * 0.75);
+    const roiH = Math.round(fullH * 0.45);
+    const roiX = Math.round((fullW - roiW) / 2);
+    const roiY = Math.round((fullH - roiH) / 2);
+
+    canvas.width = roiW;
+    canvas.height = roiH;
 
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, roiX, roiY, roiW, roiH, 0, 0, roiW, roiH);
 
     imagenCapturada = canvas.toDataURL('image/png');
 
     detenerCamara();
-    mostrarPreview(imagenCapturada, 'Cámara en Vivo');
+    mostrarPreview(imagenCapturada, 'Cámara en Vivo (ROI)');
 }
 
 // ===== 4. Cargar Imagen desde Archivo =====
@@ -155,38 +164,182 @@ function mostrarPreview(dataUrl, etiquetaModo) {
     document.getElementById('badge-modo').textContent = etiquetaModo;
 }
 
-// ===== 6. Pre-procesamiento de Imagen (Aumenta Contraste) =====
-function preprocesarImagen(dataUrl) {
+// Helper: Conversión de RGB a HSL
+function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+        h = s = 0;
+    } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+            case g: h = ((b - r) / d + 2) / 6; break;
+            case b: h = ((r - g) / d + 4) / 6; break;
+        }
+    }
+    return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+// ===== 5B. Detección Inteligente de Placa Amarilla con Aspect Ratio =====
+function detectarRegionPlacaAmarilla(imgElement) {
+    const canvas = document.createElement('canvas');
+    canvas.width = imgElement.naturalWidth || imgElement.width;
+    canvas.height = imgElement.naturalHeight || imgElement.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imgElement, 0, 0);
+
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+
+    let minX = canvas.width, maxX = 0, minY = canvas.height, maxY = 0;
+    let yellowCount = 0;
+
+    for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+            const idx = (y * canvas.width + x) * 4;
+            const [h, s, l] = rgbToHsl(data[idx], data[idx + 1], data[idx + 2]);
+            // Rango espectral del amarillo de placas vehiculares colombianas
+            if (h >= 30 && h <= 68 && s >= 40 && l >= 30 && l <= 82) {
+                yellowCount++;
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        }
+    }
+
+    const width = maxX - minX;
+    const height = maxY - minY;
+    const aspectRatio = width / (height || 1);
+
+    // Validar densidad, tamaño mínimo y morfología rectangular de placa (Aspect Ratio 1.1 a 3.5)
+    if (yellowCount > 400 && width > 40 && height > 16 && aspectRatio >= 1.05 && aspectRatio <= 3.8) {
+        const padX = Math.round(width * 0.08);
+        const padY = Math.round(height * 0.08);
+        const cropX = Math.max(0, minX - padX);
+        const cropY = Math.max(0, minY - padY);
+        const cropW = Math.min(canvas.width - cropX, width + padX * 2);
+        const cropH = Math.min(canvas.height - cropY, height + padY * 2);
+
+        const cropCanvas = document.createElement('canvas');
+        cropCanvas.width = cropW;
+        cropCanvas.height = cropH;
+        cropCanvas.getContext('2d').drawImage(canvas, cropX, cropY, cropW, cropH, 0, 0, cropW, cropH);
+        return cropCanvas;
+    }
+    return null; // Si no se encuentra patrón rectangular amarillo, procesar recorte central
+}
+
+// ===== 6. Pre-procesamiento de Imagen (Escalado + Contraste + Binarización Otsu) =====
+function preprocesarImagen(dataUrlOrCanvas) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
+            // Paso 1: Escalar a un ancho mínimo de 450px para OCR óptimo
+            const MIN_WIDTH = 450;
+            let w = img.naturalWidth;
+            let h = img.naturalHeight;
+            if (w < MIN_WIDTH) {
+                const scale = MIN_WIDTH / w;
+                w = MIN_WIDTH;
+                h = Math.round(h * scale);
+            }
+
             const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
+            canvas.width = w;
+            canvas.height = h;
             const ctx = canvas.getContext('2d');
 
-            // Filtros de contraste y escala de grises para optimizar OCR de placas
-            ctx.filter = 'grayscale(100%) contrast(175%) brightness(105%)';
-            ctx.drawImage(img, 0, 0);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
 
+            // Paso 2: Escala de grises
+            const imageData = ctx.getImageData(0, 0, w, h);
+            const d = imageData.data;
+            for (let i = 0; i < d.length; i += 4) {
+                const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+                d[i] = d[i + 1] = d[i + 2] = gray;
+            }
+
+            // Paso 3: Estiramiento de Histograma (Contraste Máximo)
+            let min = 255, max = 0;
+            for (let i = 0; i < d.length; i += 4) {
+                if (d[i] < min) min = d[i];
+                if (d[i] > max) max = d[i];
+            }
+            const range = max - min || 1;
+            for (let i = 0; i < d.length; i += 4) {
+                const stretched = ((d[i] - min) / range) * 255;
+                d[i] = d[i + 1] = d[i + 2] = stretched;
+            }
+
+            // Paso 4: Umbralización adaptativa de Otsu
+            const histogram = new Array(256).fill(0);
+            for (let i = 0; i < d.length; i += 4) {
+                histogram[Math.round(d[i])]++;
+            }
+            const totalPixels = w * h;
+            let sum = 0, sumB = 0, wB = 0, wF = 0, maxVar = 0, threshold = 128;
+            for (let i = 0; i < 256; i++) sum += i * histogram[i];
+            for (let t = 0; t < 256; t++) {
+                wB += histogram[t];
+                if (wB === 0) continue;
+                wF = totalPixels - wB;
+                if (wF === 0) break;
+                sumB += t * histogram[t];
+                const mB = sumB / wB;
+                const mF = (sum - sumB) / wF;
+                const variance = wB * wF * (mB - mF) * (mB - mF);
+                if (variance > maxVar) {
+                    maxVar = variance;
+                    threshold = t;
+                }
+            }
+
+            // Aplicar umbral binario: texto negro (0) sobre fondo blanco (255)
+            for (let i = 0; i < d.length; i += 4) {
+                const val = d[i] < threshold ? 0 : 255;
+                d[i] = d[i + 1] = d[i + 2] = val;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
             resolve(canvas.toDataURL('image/png'));
         };
-        img.onerror = () => resolve(dataUrl);
-        img.src = dataUrl;
+        img.onerror = () => resolve(dataUrlOrCanvas);
+
+        if (typeof dataUrlOrCanvas === 'string') {
+            img.src = dataUrlOrCanvas;
+        } else if (dataUrlOrCanvas.toDataURL) {
+            img.src = dataUrlOrCanvas.toDataURL('image/png');
+        }
     });
 }
 
-// ===== 7. Limpieza y Extracción con Regex de Placa Colombiana =====
+// ===== 7. Limpieza, Corrección y Validación de Formato Colombiano =====
 function extraerPlacaColombiana(textoOCR) {
     if (!textoOCR) return null;
 
-    // Eliminar saltos de línea, espacios, guiones y puntos
-    const limpio = textoOCR.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    // Eliminar palabras institucionales del marco de la placa (COLOMBIA, VILLAVICENCIO, etc.)
+    let limpio = textoOCR.toUpperCase()
+        .replace(/COLOMBIA/g, '')
+        .replace(/VILLAVICENCIO/g, '')
+        .replace(/BOGOTA/g, '')
+        .replace(/MEDELLIN/g, '')
+        .replace(/CALI/g, '')
+        .replace(/[^A-Z0-9]/g, '');
 
-    // Formatos colombianos válidos:
-    // 1. Motos nuevas: 3 letras + 2 números + 1 letra (ej: ABC12D)
-    // 2. Formato estándar: 3 letras + 3 números (ej: ABC123)
+    // 1. Matches directos con patrones oficiales
+    // Formato Moto clásica (5 chars): Ej: XYQ73
+    const regexMotoClasica = /[A-Z]{3}[0-9]{2}/;
+    // Formato Moto nueva (6 chars): Ej: XYQ73F, ABC12D
     const regexMotoNueva = /[A-Z]{3}[0-9]{2}[A-Z]/;
+    // Formato Carro estándar (6 chars): Ej: CCC890, ABC123
     const regexEstandar = /[A-Z]{3}[0-9]{3}/;
 
     const matchNueva = limpio.match(regexMotoNueva);
@@ -195,14 +348,49 @@ function extraerPlacaColombiana(textoOCR) {
     const matchEst = limpio.match(regexEstandar);
     if (matchEst) return matchEst[0];
 
-    // Búsqueda flexible de 6 caracteres consecutivos
-    const matchFlex = limpio.match(/[A-Z0-9]{6}/);
-    if (matchFlex) return matchFlex[0];
+    const matchClasica = limpio.match(regexMotoClasica);
+    if (matchClasica) return matchClasica[0];
+
+    // 2. Corrección inteligente de confusiones OCR por posición
+    if (limpio.length >= 5) {
+        for (let len of [6, 5]) {
+            for (let start = 0; start <= limpio.length - len; start++) {
+                const sub = limpio.substr(start, len);
+                let cand = '';
+                for (let i = 0; i < len; i++) {
+                    const c = sub[i];
+                    if (i < 3) {
+                        // Posiciones 0-2: Letras (O->O, 0->O, 1->I, 5->S, 8->B, 2->Z)
+                        const lMap = { '0': 'O', '1': 'I', '5': 'S', '8': 'B', '2': 'Z', '6': 'G' };
+                        cand += lMap[c] || c;
+                    } else if (i === 5 && len === 6 && /[A-Z]/.test(c)) {
+                        // Posición 5 en moto nueva: Letra
+                        cand += c;
+                    } else {
+                        // Posiciones numéricas: Números (O->0, I->1, L->1, S->5, B->8, Z->2)
+                        const nMap = { 'O': '0', 'Q': '0', 'D': '0', 'I': '1', 'L': '1', 'S': '5', 'B': '8', 'Z': '2', 'G': '6' };
+                        cand += nMap[c] || c;
+                    }
+                }
+
+                if (regexMotoNueva.test(cand) || regexEstandar.test(cand) || (len === 5 && regexMotoClasica.test(cand))) {
+                    return cand;
+                }
+            }
+        }
+    }
 
     return null;
 }
 
-// ===== 8. Procesamiento OCR con Tesseract.js =====
+function esPlacaValida(placa) {
+    if (!placa || placa.length < 5 || placa.length > 6) return false;
+    return /^[A-Z]{3}[0-9]{2}$/.test(placa) ||
+           /^[A-Z]{3}[0-9]{2}[A-Z]$/.test(placa) ||
+           /^[A-Z]{3}[0-9]{3}$/.test(placa);
+}
+
+// ===== 8. Procesamiento OCR con Tesseract.js (PSM = 7 Single Line) =====
 async function procesarPlaca() {
     if (!imagenCapturada) {
         await uiAlert('Error', 'No hay ninguna imagen cargada para procesar.', '⚠️');
@@ -227,15 +415,26 @@ async function procesarPlaca() {
     document.getElementById('ocr-progress-pct').textContent = '0%';
 
     try {
-        // Pre-procesar imagen para mayor nitidez
-        const imagenOptimizada = await preprocesarImagen(imagenCapturada);
+        let canvasParaPreprocesar = imagenCapturada;
 
-        // Invocar Tesseract.js v5
+        // Si la imagen proviene de archivo, buscar primero la placa amarilla morfológicamente
+        if (metodoCaptura === 'archivo') {
+            const imgTmp = new Image();
+            await new Promise((r) => { imgTmp.onload = r; imgTmp.src = imagenCapturada; });
+            const regionPlaca = detectarRegionPlacaAmarilla(imgTmp);
+            if (regionPlaca) {
+                canvasParaPreprocesar = regionPlaca;
+            }
+        }
+
+        // Pre-procesar imagen con binarización Otsu
+        const imagenOptimizada = await preprocesarImagen(canvasParaPreprocesar);
+
+        // Invocar Tesseract.js v5 con Single Line Mode (PSM = 7)
         const worker = await Tesseract.createWorker('eng');
-        
-        // Configurar whitelist de caracteres para placas vehiculares
         await worker.setParameters({
-            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+            tessedit_pageseg_mode: '7' // Modo 7: Single text line
         });
 
         const result = await worker.recognize(imagenOptimizada);
@@ -247,7 +446,7 @@ async function procesarPlaca() {
         ocrConfianza = confianza;
         document.getElementById('ocr-confianza-valor').textContent = confianza + '%';
 
-        // Mostrar u ocultar texto crudo
+        // Mostrar texto crudo en la interfaz
         const rawInfo = document.getElementById('ocr-raw-info');
         const rawTextEl = document.getElementById('ocr-raw-text');
         if (textoRaw.trim()) {
@@ -257,7 +456,7 @@ async function procesarPlaca() {
             rawInfo.classList.add('hidden');
         }
 
-        // Extraer formato de placa
+        // Extraer formato de placa colombiana
         const placa = extraerPlacaColombiana(textoRaw);
         placaDetectada = placa || '';
 
@@ -265,8 +464,10 @@ async function procesarPlaca() {
         placaBox.classList.remove('hidden');
 
         if (placa) {
-            // Formatear visualmente ej: "ABC 123" o "ABC 12D"
-            const formatoDisplay = placa.length === 6 ? placa.slice(0, 3) + ' · ' + placa.slice(3) : placa;
+            // Formatear visualmente ej: "XYQ 73" o "XYQ 73F" o "CCC 890"
+            const formatoDisplay = placa.length === 5 
+                ? placa.slice(0, 3) + ' · ' + placa.slice(3)
+                : placa.slice(0, 3) + ' · ' + placa.slice(3);
             document.getElementById('placa-code-text').textContent = formatoDisplay;
             document.getElementById('placa-corregida').value = placa;
         } else {
@@ -288,13 +489,22 @@ async function procesarPlaca() {
     }
 }
 
-// ===== 9. Verificar Estado de Pago en Supabase =====
+// ===== 9. Verificar Estado de Pago en Supabase (Consulta No Bloqueante) =====
 async function verificarPago() {
     const inputCorregido = document.getElementById('placa-corregida').value.trim().toUpperCase();
     const placaFinal = inputCorregido || placaDetectada;
 
     if (!placaFinal) {
         await uiAlert('Placa Requerida', 'Por favor ingresa o confirma el número de placa para verificar.', '⚠️');
+        return;
+    }
+
+    if (!esPlacaValida(placaFinal)) {
+        await uiAlert(
+            'Formato Inválido',
+            `La placa "${placaFinal}" no cumple con el formato vehicular colombiano (ej: XYQ73, XYQ73F, CCC890). Por favor verifica los caracteres.`,
+            '⚠️'
+        );
         return;
     }
 
