@@ -410,7 +410,7 @@ function extraerPlacaColombiana(textoOCR) {
     // Carro estándar: 3 letras + 3 números (ej: CCC890)
     const regexEstandar = /^[A-Z]{3}[0-9]{3}$/;
 
-    // Función auxiliar para normalizar y corregir un candidato de 5 o 6 caracteres
+    // 1) corregirYValidar: ahora devuelve un objeto { corregido, bruto }
     function corregirYValidar(str) {
         if (!str || str.length < 5 || str.length > 6) return null;
         const len = str.length;
@@ -432,47 +432,46 @@ function extraerPlacaColombiana(textoOCR) {
         }
 
         if (regexMotoNueva.test(cand) || regexEstandar.test(cand) || (len === 5 && regexMotoClasica.test(cand))) {
-            return cand;
+            return { corregido: cand, bruto: str };
         }
         return null;
     }
 
-    // A) Probar tokens individuales directos (ej: "XYQ73", "WUF62C")
+    // A) tokens individuales
     for (let t of tokens) {
         const val = corregirYValidar(t);
-        if (val) candidatos.push({ placa: val, score: 100 });
+        if (val) candidatos.push({ placa: val.corregido, bruto: val.bruto, score: 100 });
     }
 
-    // B) Probar combinaciones de tokens adyacentes (ej: "XYQ" + "73" -> "XYQ73", "WUF" + "62C" -> "WUF62C", "KY" + "QT3" -> "XYQ73")
+    // B) combinación de 2 tokens adyacentes
     for (let i = 0; i < tokens.length - 1; i++) {
         const combo = tokens[i] + tokens[i + 1];
         const val = corregirYValidar(combo);
-        if (val) candidatos.push({ placa: val, score: 90 });
+        if (val) candidatos.push({ placa: val.corregido, bruto: val.bruto, score: 90 });
     }
 
-    // C) Probar combinaciones de 3 tokens (ej: "WUF" + "62" + "C")
+    // C) combinación de 3 tokens
     for (let i = 0; i < tokens.length - 2; i++) {
         const combo3 = tokens[i] + tokens[i + 1] + tokens[i + 2];
         const val = corregirYValidar(combo3);
-        if (val) candidatos.push({ placa: val, score: 85 });
+        if (val) candidatos.push({ placa: val.corregido, bruto: val.bruto, score: 85 });
     }
 
-    // D) Si aún no hay match, buscar en texto concatenado
+    // D) búsqueda por subcadena en texto concatenado
     if (candidatos.length === 0) {
         const concatenado = tokens.join('');
         for (let len of [6, 5]) {
             for (let s = 0; s <= concatenado.length - len; s++) {
                 const sub = concatenado.substr(s, len);
                 const val = corregirYValidar(sub);
-                if (val) candidatos.push({ placa: val, score: 50 });
+                if (val) candidatos.push({ placa: val.corregido, bruto: val.bruto, score: 50 });
             }
         }
     }
 
     if (candidatos.length > 0) {
-        // Ordenar por mayor score y retornar la mejor opción
         candidatos.sort((a, b) => b.score - a.score);
-        return candidatos[0].placa;
+        return candidatos[0]; // Devuelve objeto completo { placa, bruto, score }
     }
 
     return null;
@@ -483,6 +482,59 @@ function esPlacaValida(placa) {
     return /^[A-Z]{3}[0-9]{2}$/.test(placa) ||
            /^[A-Z]{3}[0-9]{2}[A-Z]$/.test(placa) ||
            /^[A-Z]{3}[0-9]{3}$/.test(placa);
+}
+
+// ===== 7B. Votación por Consenso de Pases (Criterio: Conteo de Pases > Confianza) =====
+function votarConsenso(resultadosTorneo) {
+    if (resultadosTorneo.length === 0) return null;
+    if (resultadosTorneo.length === 1) return resultadosTorneo[0].placa;
+
+    const porLongitud = {};
+    resultadosTorneo.forEach(r => {
+        const len = r.placa.length;
+        (porLongitud[len] = porLongitud[len] || []).push(r);
+    });
+
+    let mejorGrupo = [];
+    let maxCount = 0;
+    for (const len in porLongitud) {
+        if (porLongitud[len].length > maxCount) {
+            maxCount = porLongitud[len].length;
+            mejorGrupo = porLongitud[len];
+        }
+    }
+    if (mejorGrupo.length === 1) return mejorGrupo[0].placa;
+
+    const longitud = mejorGrupo[0].placa.length;
+    let resultado = '';
+
+    for (let pos = 0; pos < longitud; pos++) {
+        // conteo = criterio PRINCIPAL (cuántos pases distintos coinciden en esta letra/número)
+        // pesoConf = criterio de DESEMPATE (suma de confianza)
+        const conteo = {};
+        const pesoConf = {};
+        mejorGrupo.forEach(r => {
+            const c = r.placa[pos];
+            conteo[c] = (conteo[c] || 0) + 1;
+            pesoConf[c] = (pesoConf[c] || 0) + Math.max(r.conf, 1);
+        });
+
+        let mejorChar = '';
+        let mejorConteo = -1;
+        let mejorConf = -1;
+        for (const c in conteo) {
+            const gana = conteo[c] > mejorConteo ||
+                         (conteo[c] === mejorConteo && pesoConf[c] > mejorConf);
+            if (gana) {
+                mejorConteo = conteo[c];
+                mejorConf = pesoConf[c];
+                mejorChar = c;
+            }
+        }
+        resultado += mejorChar;
+    }
+
+    return esPlacaValida(resultado) ? resultado : mejorGrupo[0].placa;
 }
 
 // ===== 8. Procesamiento OCR Multi-Paso con Tesseract.js =====
@@ -523,18 +575,10 @@ async function procesarPlaca() {
             }
         }
 
-        // ─── MEJORA 2: Torneo Multi-PSM ─────────────────────────────────────────────
-        // Preparar las 4 variantes de imagen que se van a someter a OCR:
-        //  A) Alto contraste sin binarizar   — PSM 7 (línea única)
-        //  B) Alto contraste sin binarizar   — PSM 8 (palabra única)
-        //  C) Otsu binarizado                — PSM 6 (bloque uniforme)
-        //  D) Otsu binarizado + invertido    — PSM 13 (texto crudo sin OSD)
-        // Se recogen TODOS los textos crudos, se pasan por extraerPlacaColombiana
-        // y se elige el candidato con mayor score.
-
-        const imgContraste  = await preprocesarImagen(canvasParaPreprocesar, false, false); // A y B
-        const imgOtsu       = await preprocesarImagen(canvasParaPreprocesar, true,  false); // C
-        const imgOtsuInvert = await preprocesarImagen(canvasParaPreprocesar, true,  true);  // D  MEJORA 3
+        // Preparar las 4 variantes de imagen para el torneo
+        const imgContraste  = await preprocesarImagen(canvasParaPreprocesar, false, false);
+        const imgOtsu       = await preprocesarImagen(canvasParaPreprocesar, true,  false);
+        const imgOtsuInvert = await preprocesarImagen(canvasParaPreprocesar, true,  true);
 
         document.getElementById('ocr-progress').style.width = '25%';
         document.getElementById('ocr-progress-pct').textContent = '25%';
@@ -542,7 +586,6 @@ async function procesarPlaca() {
         const worker = await Tesseract.createWorker('eng');
         const WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
-        // Definir los 4 pases del torneo
         const pases = [
             { img: imgContraste,  psm: '7',  label: 'PSM7-contraste'  },
             { img: imgContraste,  psm: '8',  label: 'PSM8-contraste'  },
@@ -569,11 +612,18 @@ async function procesarPlaca() {
             if (texto) textosCrudos.push(texto);
             const candidato = extraerPlacaColombiana(texto);
             if (candidato) {
-                resultadosTorneo.push({ placa: candidato, conf, label: pase.label });
+                resultadosTorneo.push({
+                    placa: candidato.placa,
+                    bruto: candidato.bruto,
+                    rawText: texto,
+                    conf,
+                    psm: pase.psm,
+                    variant: pase.label,
+                    label: pase.label
+                });
             }
             if (conf > mejorConfianza) mejorConfianza = conf;
 
-            // Actualizar barra de progreso
             const pct = Math.round(((i + 1) / pases.length) * 80) + 10;
             document.getElementById('ocr-progress').style.width = pct + '%';
             document.getElementById('ocr-progress-pct').textContent = pct + '%';
@@ -584,10 +634,20 @@ async function procesarPlaca() {
         document.getElementById('ocr-progress').style.width = '100%';
         document.getElementById('ocr-progress-pct').textContent = '100%';
 
-        // Elegir el mejor candidato del torneo
-        // Criterio: placa válida con mayor confianza OCR en su pase
-        resultadosTorneo.sort((a, b) => b.conf - a.conf);
-        const ganador = resultadosTorneo[0] || null;
+        // Tabla de depuración en consola para evidencia científica y análisis de dataset
+        if (resultadosTorneo.length > 0) {
+            console.table(resultadosTorneo.map(r => ({
+                pase: r.label,
+                crudo: r.rawText.replace(/\n/g, ' ').slice(0, 40),
+                bruto: r.bruto,
+                corregido: r.placa,
+                confianza: r.conf + '%'
+            })));
+        }
+
+        // Selección por consenso de pases
+        const placaConsenso = votarConsenso(resultadosTorneo);
+        const ganador = resultadosTorneo.find(r => r.placa === placaConsenso) || resultadosTorneo[0] || null;
 
         ocrConfianza = ganador ? ganador.conf : mejorConfianza;
         document.getElementById('ocr-confianza-valor').textContent = ocrConfianza + '%';
@@ -603,7 +663,7 @@ async function procesarPlaca() {
             rawInfo.classList.add('hidden');
         }
 
-        const placa = ganador ? ganador.placa : null;
+        const placa = placaConsenso;
         placaDetectada = placa || '';
 
         ocrStatus.classList.add('hidden');
@@ -615,7 +675,7 @@ async function procesarPlaca() {
                 : placa.slice(0, 3) + ' · ' + placa.slice(3);
             document.getElementById('placa-code-text').textContent = formatoDisplay;
             document.getElementById('placa-corregida').value = placa;
-            console.log(`🏆 Ganador del torneo: ${placa} (${ganador.label}, conf ${ganador.conf}%)`);
+            console.log(`🏆 Placa ganadora por consenso: ${placa} (Conf: ${ocrConfianza}%)`);
         } else {
             document.getElementById('placa-code-text').textContent = 'NO DETECTADA';
             document.getElementById('placa-corregida').value = '';
