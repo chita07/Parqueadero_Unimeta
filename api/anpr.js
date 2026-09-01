@@ -63,13 +63,51 @@ export default async function handler(req, res) {
             }
         }
 
+        const groqKey = process.env.GROQ_API_KEY || '';
+        let groqStatus = 'No configurado';
+        let groqError = null;
+
+        if (groqKey) {
+            try {
+                const gTest = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${groqKey}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: 'llama-3.2-11b-vision-preview',
+                        messages: [{ role: 'user', content: 'Hola, responde OK' }],
+                        max_tokens: 5
+                    })
+                });
+                if (gTest.ok) {
+                    groqStatus = 'CONECTADO Y FUNCIONANDO';
+                } else {
+                    const gErrTxt = await gTest.text();
+                    groqStatus = `ERROR HTTP ${gTest.status}`;
+                    groqError = gErrTxt;
+                }
+            } catch (err) {
+                groqStatus = 'EXCEPCION';
+                groqError = err.message;
+            }
+        }
+
         return res.status(200).json({
             endpoint: '/api/anpr',
-            geminiKeyConfigurada: Boolean(geminiKey),
-            geminiKeyPreview: keyPrefix,
-            geminiKeyLongitud: geminiKey.length,
-            estadoConexionGemini: testStatus,
-            detalleError: testError
+            gemini: {
+                configurada: Boolean(geminiKey),
+                preview: keyPrefix,
+                estado: testStatus,
+                detalleError: testError
+            },
+            groq: {
+                configurada: Boolean(groqKey),
+                preview: groqKey ? groqKey.slice(0, 8) + '...' : 'NO_CONFIGURADA',
+                estado: groqStatus,
+                detalleError: groqError
+            }
         });
     }
 
