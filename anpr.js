@@ -635,6 +635,8 @@ function votarConsenso(resultadosTorneo) {
                 mejorConteo = conteo[c];
                 mejorConf = pesoConf[c];
                 mejorChar = c;
+            }
+        }
         resultado += mejorChar;
     }
 
