@@ -21,8 +21,49 @@ export default async function handler(req, res) {
         return;
     }
 
+    if (req.method === 'GET') {
+        const geminiKey = process.env.GEMINI_API_KEY || '';
+        const keyPrefix = geminiKey ? geminiKey.slice(0, 8) + '...' + geminiKey.slice(-4) : 'NO_CONFIGURADA';
+        
+        let testStatus = 'Sin probar';
+        let testError = null;
+
+        if (geminiKey) {
+            try {
+                const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`;
+                const tRes = await fetch(testUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: 'Hola, responde OK' }] }]
+                    })
+                });
+                if (tRes.ok) {
+                    const tData = await tRes.json();
+                    testStatus = 'CONECTADO Y FUNCIONANDO';
+                } else {
+                    const tErr = await tRes.text();
+                    testStatus = `ERROR HTTP ${tRes.status}`;
+                    testError = tErr;
+                }
+            } catch (err) {
+                testStatus = 'EXCEPCION';
+                testError = err.message;
+            }
+        }
+
+        return res.status(200).json({
+            endpoint: '/api/anpr',
+            geminiKeyConfigurada: Boolean(geminiKey),
+            geminiKeyPreview: keyPrefix,
+            geminiKeyLongitud: geminiKey.length,
+            estadoConexionGemini: testStatus,
+            detalleError: testError
+        });
+    }
+
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Método no permitido. Utiliza POST.' });
+        return res.status(405).json({ error: 'Método no permitido. Utiliza POST o GET.' });
     }
 
     try {
@@ -229,7 +270,8 @@ Instrucciones estrictas:
         // Si ninguna API Key está configurada o fallaron
         return res.status(200).json({
             success: false,
-            error: 'No hay credencial de API configurada en Vercel (GEMINI_API_KEY). Usando Tesseract.js local como respaldo.',
+            error: 'No se obtuvo resultado de la IA. Usando Tesseract.js local como respaldo.',
+            geminiError: ultimoErrorGemini || 'Variable GEMINI_API_KEY no encontrada en process.env',
             usaLocalFallback: true
         });
 
