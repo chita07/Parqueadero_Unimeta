@@ -306,12 +306,70 @@ function detectarRegionPlacaAmarilla(imgElement) {
     return null;
 }
 
-// ===== 6. Pre-procesamiento de Imagen (Escalado + Contraste + Otsu opcional) =====
+// ===== 6. Pre-procesamiento de Imagen (Escalado + Contraste + Otsu + Limpieza de Bordes) =====
+function limpiarBordesNegros(ctx, width, height) {
+    const imgData = ctx.getImageData(0, 0, width, height);
+    const data = imgData.data;
+    const visited = new Uint8Array(width * height);
+    const queue = [];
+
+    // Añadir todos los píxeles negros que toquen los 4 bordes exteriores
+    for (let x = 0; x < width; x++) {
+        // Borde superior
+        let idxTop = (0 * width + x) * 4;
+        if (data[idxTop] < 128) { queue.push(x, 0); visited[0 * width + x] = 1; }
+        // Borde inferior
+        let idxBot = ((height - 1) * width + x) * 4;
+        if (data[idxBot] < 128) { queue.push(x, height - 1); visited[(height - 1) * width + x] = 1; }
+    }
+    for (let y = 0; y < height; y++) {
+        // Borde izquierdo
+        let idxLeft = (y * width + 0) * 4;
+        if (data[idxLeft] < 128 && !visited[y * width + 0]) { queue.push(0, y); visited[y * width + 0] = 1; }
+        // Borde derecho
+        let idxRight = (y * width + (width - 1)) * 4;
+        if (data[idxRight] < 128 && !visited[y * width + (width - 1)]) { queue.push(width - 1, y); visited[y * width + (width - 1)] = 1; }
+    }
+
+    // BFS Flood Fill: Convertir todos los píxeles negros conectados al borde en blanco puro (255)
+    let head = 0;
+    while (head < queue.length) {
+        const cx = queue[head++];
+        const cy = queue[head++];
+
+        const cIdx = (cy * width + cx) * 4;
+        data[cIdx] = 255;
+        data[cIdx + 1] = 255;
+        data[cIdx + 2] = 255;
+
+        const neighbors = [
+            [cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]
+        ];
+
+        for (let i = 0; i < 4; i++) {
+            const nx = neighbors[i][0];
+            const ny = neighbors[i][1];
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                const nPos = ny * width + nx;
+                if (!visited[nPos]) {
+                    visited[nPos] = 1;
+                    const nIdx = nPos * 4;
+                    if (data[nIdx] < 128) {
+                        queue.push(nx, ny);
+                    }
+                }
+            }
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+}
+
 function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-            const MIN_WIDTH = 520;
+            const MIN_WIDTH = 550;
             let w = img.naturalWidth || img.width;
             let h = img.naturalHeight || img.height;
             if (w < MIN_WIDTH) {
@@ -351,7 +409,7 @@ function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false) 
             }
 
             if (usarOtsu) {
-                // Umbralización de Otsu: calcula el umbral óptimo para separar texto de fondo
+                // Umbralización de Otsu
                 const histogram = new Array(256).fill(0);
                 for (let i = 0; i < d.length; i += 4) {
                     histogram[Math.round(d[i])]++;
@@ -377,19 +435,37 @@ function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false) 
                     const val = d[i] < threshold ? 0 : 255;
                     d[i] = d[i + 1] = d[i + 2] = val;
                 }
+
+                ctx.putImageData(imageData, 0, 0);
+                // Eliminar artefactos y marcos negros conectados a los bordes exteriores
+                limpiarBordesNegros(ctx, w, h);
+            } else {
+                ctx.putImageData(imageData, 0, 0);
             }
 
-            // MEJORA 3: Inversión de imagen (para casos donde Otsu invierte los colores)
+            // Añadir margen blanco perimetral (padding de 20px) para respiración del OCR
+            const pad = 24;
+            const paddedCanvas = document.createElement('canvas');
+            paddedCanvas.width = w + pad * 2;
+            paddedCanvas.height = h + pad * 2;
+            const pCtx = paddedCanvas.getContext('2d');
+            pCtx.fillStyle = '#ffffff';
+            pCtx.fillRect(0, 0, paddedCanvas.width, paddedCanvas.height);
+            pCtx.drawImage(canvas, pad, pad);
+
+            // Invertir si se solicita (PSM 13)
             if (invertir) {
-                for (let i = 0; i < d.length; i += 4) {
-                    d[i] = 255 - d[i];
-                    d[i + 1] = 255 - d[i + 1];
-                    d[i + 2] = 255 - d[i + 2];
+                const pImgData = pCtx.getImageData(0, 0, paddedCanvas.width, paddedCanvas.height);
+                const pData = pImgData.data;
+                for (let i = 0; i < pData.length; i += 4) {
+                    pData[i] = 255 - pData[i];
+                    pData[i + 1] = 255 - pData[i + 1];
+                    pData[i + 2] = 255 - pData[i + 2];
                 }
+                pCtx.putImageData(pImgData, 0, 0);
             }
 
-            ctx.putImageData(imageData, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
+            resolve(paddedCanvas.toDataURL('image/png'));
         };
         img.onerror = () => resolve(typeof dataUrlOrCanvas === 'string' ? dataUrlOrCanvas : '');
 
