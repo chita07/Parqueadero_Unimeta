@@ -60,8 +60,8 @@ Instrucciones estrictas:
         // 1. Probar Google Gemini API (2.5 Flash / 1.5 Flash)
         if (geminiKey) {
             try {
-                // Probar primero con gemini-2.5-flash, si no con gemini-1.5-flash
-                const models = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+                // Probar modelos con soporte multimodal activo en v1beta
+                const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
                 let plateResult = null;
                 let usedModel = null;
 
