@@ -185,31 +185,41 @@ Si no puedes identificarla, responde: NO_DETECTADA`;
                             },
                             body: JSON.stringify({
                                 model: model,
-                                messages: [{
-                                    role: 'user',
-                                    content: [
-                                        { type: 'text', text: prompt },
-                                        { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } }
-                                    ]
-                                }],
+                                messages: [
+                                    {
+                                        role: 'system',
+                                        content: 'Eres un sistema OCR de placas vehiculares de Colombia. Responde directamente con el código de la placa (ej: WUF62C o CCC890). No incluyas explicaciones ni razonamiento.'
+                                    },
+                                    {
+                                        role: 'user',
+                                        content: [
+                                            { type: 'text', text: prompt },
+                                            { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64Data}` } }
+                                        ]
+                                    }
+                                ],
                                 temperature: 0.05,
-                                max_tokens: 20
+                                max_tokens: 150
                             })
                         });
 
                         if (gRes.ok) {
                             const gData = await gRes.json();
-                            const text = gData?.choices?.[0]?.message?.content?.trim() || '';
-                            if (text) {
-                                const cleaned = sanitizarPlaca(text);
-                                return res.status(200).json({
-                                    success: true,
-                                    placa: cleaned.placa,
-                                    valida: cleaned.esValida,
-                                    raw: text,
-                                    motor: `IA Groq (${model})`,
-                                    confianza: cleaned.esValida ? 95 : 35
-                                });
+                            const rawText = gData?.choices?.[0]?.message?.content?.trim() || '';
+                            if (rawText) {
+                                const cleaned = sanitizarPlaca(rawText);
+                                if (cleaned.esValida) {
+                                    return res.status(200).json({
+                                        success: true,
+                                        placa: cleaned.placa,
+                                        valida: cleaned.esValida,
+                                        raw: rawText,
+                                        motor: `IA Groq (${model})`,
+                                        confianza: 95
+                                    });
+                                } else {
+                                    console.warn(`Groq (${model}) respondió pero no fue placa válida:`, rawText);
+                                }
                             }
                         } else {
                             const errTxt = await gRes.text();
@@ -244,8 +254,33 @@ Si no puedes identificarla, responde: NO_DETECTADA`;
 function sanitizarPlaca(raw) {
     if (!raw) return { placa: '', esValida: false };
 
-    // Limpiar texto de signos, comillas, backticks y palabras no deseadas
-    let clean = raw.toUpperCase()
+    // 1. Eliminar etiquetas de razonamiento <think>...</think> de modelos Qwen/DeepSeek
+    let text = raw.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+    // 2. Extraer primero con expresiones regulares tolerantes a guiones/espacios
+    // Formato Moto Nueva: 3 Letras + 2 Números + 1 Letra (ej: WUF-62C -> WUF62C)
+    const matchMotoNueva = text.match(/\b([A-Z]{3})[-\s]?([0-9]{2})[-\s]?([A-Z])\b/i);
+    if (matchMotoNueva) {
+        const placa = `${matchMotoNueva[1]}${matchMotoNueva[2]}${matchMotoNueva[3]}`.toUpperCase();
+        return { placa, esValida: true };
+    }
+
+    // Formato Carro Estándar: 3 Letras + 3 Números (ej: CCC-890 -> CCC890)
+    const matchCarro = text.match(/\b([A-Z]{3})[-\s]?([0-9]{3})\b/i);
+    if (matchCarro) {
+        const placa = `${matchCarro[1]}${matchCarro[2]}`.toUpperCase();
+        return { placa, esValida: true };
+    }
+
+    // Formato Moto Clásica: 3 Letras + 2 Números (ej: XYQ-73 -> XYQ73)
+    const matchMotoClasica = text.match(/\b([A-Z]{3})[-\s]?([0-9]{2})\b/i);
+    if (matchMotoClasica) {
+        const placa = `${matchMotoClasica[1]}${matchMotoClasica[2]}`.toUpperCase();
+        return { placa, esValida: true };
+    }
+
+    // 3. Limpieza profunda estándar
+    let clean = text.toUpperCase()
         .replace(/```[a-z]*\n?/gi, '')
         .replace(/`/g, '')
         .replace(/COLOMBIA/g, '')
@@ -255,27 +290,22 @@ function sanitizarPlaca(raw) {
         .replace(/CALI/g, '')
         .replace(/[^A-Z0-9]/g, '');
 
-    // Formatos válidos colombianos:
-    // Moto clásica: 3L + 2N (ej: XYQ73, XYO73)
-    // Moto nueva: 3L + 2N + 1L (ej: WUF62C, MKH87E)
-    // Carro estándar: 3L + 3N (ej: CCC890)
-    const regexMotoClasica = /^[A-Z]{3}[0-9]{2}$/;
     const regexMotoNueva = /^[A-Z]{3}[0-9]{2}[A-Z]$/;
     const regexEstandar = /^[A-Z]{3}[0-9]{3}$/;
+    const regexMotoClasica = /^[A-Z]{3}[0-9]{2}$/;
 
-    if (regexMotoClasica.test(clean) || regexMotoNueva.test(clean) || regexEstandar.test(clean)) {
+    if (regexMotoNueva.test(clean) || regexEstandar.test(clean) || regexMotoClasica.test(clean)) {
         return { placa: clean, esValida: true };
     }
 
-    // Si tiene texto extra alrededor, buscar subcadena que cumpla regex
-    const matchNueva = clean.match(/[A-Z]{3}[0-9]{2}[A-Z]/);
-    if (matchNueva) return { placa: matchNueva[0], esValida: true };
+    const subNueva = clean.match(/[A-Z]{3}[0-9]{2}[A-Z]/);
+    if (subNueva) return { placa: subNueva[0], esValida: true };
 
-    const matchEstandar = clean.match(/[A-Z]{3}[0-9]{3}/);
-    if (matchEstandar) return { placa: matchEstandar[0], esValida: true };
+    const subEstandar = clean.match(/[A-Z]{3}[0-9]{3}/);
+    if (subEstandar) return { placa: subEstandar[0], esValida: true };
 
-    const matchClasica = clean.match(/[A-Z]{3}[0-9]{2}/);
-    if (matchClasica) return { placa: matchClasica[0], esValida: true };
+    const subClasica = clean.match(/[A-Z]{3}[0-9]{2}/);
+    if (subClasica) return { placa: subClasica[0], esValida: true };
 
     return { placa: clean.slice(0, 6), esValida: false };
 }
