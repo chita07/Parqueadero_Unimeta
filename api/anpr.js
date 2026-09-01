@@ -1,5 +1,10 @@
-// Serverless Function para Vercel — /api/anpr
-// Reconocimiento de Placas Asistido por IA Multimodal (Google Gemini 2.5 Flash / Groq / OpenRouter)
+export const config = {
+    api: {
+        bodyParser: {
+            sizeLimit: '10mb'
+        }
+    }
+};
 
 export default async function handler(req, res) {
     // Configurar CORS
@@ -21,23 +26,28 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { image, rawImage } = req.body || {};
+        let bodyData = req.body;
+        if (typeof bodyData === 'string') {
+            try { bodyData = JSON.parse(bodyData); } catch (e) { }
+        }
+
+        const { image, rawImage } = bodyData || {};
         const imgToProcess = image || rawImage;
 
         if (!imgToProcess) {
             return res.status(400).json({ error: 'No se envió ninguna imagen (base64).' });
         }
 
-        // Extraer base64 limpio y mime type
+        // Extraer base64 puro y mime type de forma segura
         let base64Data = imgToProcess;
         let mimeType = 'image/png';
 
-        if (imgToProcess.startsWith('data:')) {
-            const matches = imgToProcess.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-            if (matches && matches.length === 3) {
-                mimeType = matches[1];
-                base64Data = matches[2];
-            }
+        if (imgToProcess.includes('base64,')) {
+            const parts = imgToProcess.split('base64,');
+            const header = parts[0];
+            const mimeMatch = header.match(/data:([^;]+)/);
+            if (mimeMatch) mimeType = mimeMatch[1];
+            base64Data = parts[1].replace(/[\r\n\s]+/g, '');
         }
 
         const geminiKey = process.env.GEMINI_API_KEY;
