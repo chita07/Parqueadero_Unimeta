@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cesión Temporal de Plaza - Parqueadero Unimeta</title>
+    <link rel="stylesheet" href="cesion.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <a href="index.html"><img src="imagenes/logo_unimeta.png" alt="Logo Unimeta" class="logo-img"></a>
+                <span class="logo-text">Cesión de Plazas</span>
+            </div>
+            <nav>
+                <a href="index.html" class="btn-nav">Inicio</a>
+                <a href="mapa.html" class="btn-nav">Mapa</a>
+                <a href="pago.html" class="btn-nav">Tarifas / Pago</a>
+                <a href="cesion.html" class="btn-nav active">Cesión</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="cesion-container">
+        <!-- Hero Header -->
+        <div class="cesion-hero">
+            <h1>🔄 Cesión Temporal de Plazas</h1>
+            <p>¿Eres mensualista y no vas a usar tu espacio hoy o un día específico? Infórmalo aquí para ceder temporalmente tu plaza a otro miembro de la comunidad universitaria.</p>
+        </div>
+
+        <div class="cesion-grid">
+            <!-- Formulario de Cesión -->
+            <div class="cesion-card">
+                <div class="card-header">
+                    <span class="card-icon">📋</span>
+                    <h2>Informar Ausencia / Ceder Plaza</h2>
+                </div>
+                <form id="form-ausencia" onsubmit="event.preventDefault(); confirmarAusencia();">
+                    <div class="form-group">
+                        <label for="placa-mensual">Placa del Mensualista *</label>
+                        <input type="text" id="placa-mensual" placeholder="Ej: ABC-123" maxlength="7" required>
+                        <small>Tu vehículo con plan mensual activo.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fecha-ausencia">Fecha de Ausencia *</label>
+                        <input type="date" id="fecha-ausencia" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Jornada de Ausencia *</label>
+                        <div class="radio-jornada-group">
+                            <label class="radio-label">
+                                <input type="radio" name="jornada-cesion" value="diurna" checked>
+                                <span>☀️ Diurna (6 AM – 1 PM)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="jornada-cesion" value="nocturna">
+                                <span>🌙 Nocturna (6 PM – 10 PM)</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="jornada-cesion" value="ambas">
+                                <span>🕐 Ambas jornadas</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="placa-beneficiario">Placa del Beneficiario (Opcional)</label>
+                        <input type="text" id="placa-beneficiario" placeholder="Ej: XYZ-789" maxlength="7">
+                        <small>Déjalo vacío para que cualquier usuario temporal pueda ocupar el espacio disponible.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="observacion">Motivo u Observación (Opcional)</label>
+                        <textarea id="observacion" rows="2" placeholder="Ej: No tengo clases este día."></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-cesion-submit" id="btn-submit-cesion">
+                        🔄 Confirmar Cesión de Plaza
+                    </button>
+                </form>
+
+                <div id="resultado-cesion" class="resultado-box hidden"></div>
+            </div>
+
+            <!-- Panel Lateral: Mis Cesiones + Plazas Cedidas Hoy -->
+            <div class="cesion-sidebar">
+                <!-- Mis Cesiones Activas -->
+                <div class="cesion-card">
+                    <div class="card-header">
+                        <span class="card-icon">🔍</span>
+                        <h2>Consultar Mis Cesiones</h2>
+                    </div>
+                    <div class="search-box-cesion">
+                        <input type="text" id="consulta-placa" placeholder="Ingresa tu placa" maxlength="7">
+                        <button class="btn-consultar" onclick="cargarMisCesiones()">Buscar</button>
+                    </div>
+                    <div class="cesiones-list" id="mis-cesiones-lista">
+                        <p class="placeholder-text">Ingresa tu placa para ver tus cesiones programadas.</p>
+                    </div>
+                </div>
+
+                <!-- Plazas Cedidas Disponibles Hoy -->
+                <div class="cesion-card">
+                    <div class="card-header">
+                        <span class="card-icon">🅿️</span>
+                        <h2>Plazas Cedidas Hoy</h2>
+                    </div>
+                    <p class="card-desc">Espacios liberados temporalmente por mensualistas para el día de hoy:</p>
+                    <div class="disponibles-list" id="plazas-hoy-lista">
+                        <div class="loading-spinner">Cargando plazas cedidas...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Dialog Modal UI -->
+    <div class="custom-dialog-overlay hidden" id="custom-dialog-overlay">
+        <div class="custom-dialog">
+            <div class="custom-dialog-icon" id="custom-dialog-icon">⚠️</div>
+            <h3 class="custom-dialog-title" id="custom-dialog-title">Mensaje</h3>
+            <p class="custom-dialog-msg" id="custom-dialog-msg"></p>
+            <div class="custom-dialog-actions" id="custom-dialog-actions"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Universidad del Meta — Parqueadero Unimeta. Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <script src="cesion.js"></script>
+</body>
+
+</html>

@@ -17,6 +17,7 @@
             </div>
             <nav>
                 <a href="mapa.html" class="btn-admin" style="background-color:white;color:#E30614;">📍 Ver Mapa</a>
+                <a href="cesion.html" class="btn-admin" style="background-color:rgba(255,255,255,0.2);color:white;">🔄 Cesión</a>
                 <a href="admin.html" class="btn-admin">Administrador</a>
             </nav>
         </div>
@@ -112,7 +113,7 @@
     </footer>
 
 
-    <!-- Modal Login/Registro (Simulador) -->
+    <!-- Modal Login/Registro Real -->
     <div id="auth-modal" class="auth-modal">
         <div class="auth-modal-content">
             <span class="close-modal" id="close-auth-modal">&times;</span>
@@ -120,16 +121,16 @@
             <div id="login-form-container" class="auth-form-container active">
                 <h2>Iniciar Sesión</h2>
                 <p>Ingresa a tu cuenta para gestionar tu parqueadero.</p>
-                <form onsubmit="event.preventDefault(); alert('Simulación: Iniciando sesión... Funcionalidad no conectada al backend.');">
+                <form id="form-login-real">
                     <div class="input-group">
                         <label>Correo Electrónico</label>
-                        <input type="email" placeholder="ejemplo@correo.com" required>
+                        <input type="email" id="login-email" placeholder="ejemplo@correo.com" required>
                     </div>
                     <div class="input-group">
                         <label>Contraseña</label>
-                        <input type="password" placeholder="••••••••" required>
+                        <input type="password" id="login-password" placeholder="••••••••" required>
                     </div>
-                    <button type="submit" class="btn-primary auth-submit">Ingresar</button>
+                    <button type="submit" class="btn-primary auth-submit" id="btn-submit-login">Ingresar</button>
                 </form>
                 <div class="auth-switch">
                     ¿No tienes cuenta? <span id="switch-to-register">Regístrate aquí</span>
@@ -139,20 +140,28 @@
             <div id="register-form-container" class="auth-form-container">
                 <h2>Crear Perfil</h2>
                 <p>Regístrate para comenzar a usar el sistema.</p>
-                <form onsubmit="event.preventDefault(); alert('Simulación: Registrando perfil... Funcionalidad no conectada al backend.');">
+                <form id="form-register-real">
                     <div class="input-group">
                         <label>Nombre Completo</label>
-                        <input type="text" placeholder="Tu nombre" required>
+                        <input type="text" id="reg-nombre-u" placeholder="Tu nombre" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Cédula</label>
+                        <input type="text" id="reg-cedula-u" placeholder="1234567890" required>
                     </div>
                     <div class="input-group">
                         <label>Correo Electrónico</label>
-                        <input type="email" placeholder="ejemplo@correo.com" required>
+                        <input type="email" id="reg-email-u" placeholder="ejemplo@correo.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Teléfono</label>
+                        <input type="tel" id="reg-telefono-u" placeholder="3001234567">
                     </div>
                     <div class="input-group">
                         <label>Contraseña</label>
-                        <input type="password" placeholder="Crea una contraseña" required>
+                        <input type="password" id="reg-password-u" placeholder="Crea una contraseña" required>
                     </div>
-                    <button type="submit" class="btn-primary auth-submit">Crear Cuenta</button>
+                    <button type="submit" class="btn-primary auth-submit" id="btn-submit-register">Crear Cuenta</button>
                 </form>
                 <div class="auth-switch">
                     ¿Ya tienes cuenta? <span id="switch-to-login">Inicia sesión</span>
@@ -162,6 +171,9 @@
         </div>
     </div>
 
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
     <script src="index.js"></script>
 </body>
 

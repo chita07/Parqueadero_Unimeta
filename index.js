@@ -1,4 +1,4 @@
-// index.js - Lógica para simulador de Login/Registro
+// index.js - Autenticación Real con Supabase (Tabla usuarios)
 
 document.addEventListener('DOMContentLoaded', () => {
     // Referencias a los botones de abrir modal
@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Botones para alternar entre form de login y registro
     const switchToRegister = document.getElementById('switch-to-register');
     const switchToLogin = document.getElementById('switch-to-login');
+
+    // Formularios
+    const formLoginReal = document.getElementById('form-login-real');
+    const formRegisterReal = document.getElementById('form-register-real');
 
     // Función para abrir el modal en una vista específica (login o register)
     function openModal(view) {
@@ -53,4 +57,96 @@ document.addEventListener('DOMContentLoaded', () => {
     if(switchToRegister) switchToRegister.addEventListener('click', () => openModal('register'));
     if(switchToLogin) switchToLogin.addEventListener('click', () => openModal('login'));
 
+    // ===== LOGIN REAL =====
+    if (formLoginReal) {
+        formLoginReal.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const btnSubmit = document.getElementById('btn-submit-login');
+
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = 'Verificando...';
+
+            try {
+                const { data: user, error } = await db
+                    .from('usuarios')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('password', password)
+                    .single();
+
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Ingresar';
+
+                if (error || !user) {
+                    alert('❌ Correo o contraseña incorrectos.');
+                    return;
+                }
+
+                // Guardar sesión
+                localStorage.setItem('unimeta_session', JSON.stringify(user));
+                closeModal();
+
+                if (user.rol === 'admin') {
+                    alert(`🔑 Bienvenido Administrador: ${user.nombre}`);
+                    window.location.href = 'admin.html';
+                } else {
+                    alert(`✅ ¡Bienvenido, ${user.nombre}!`);
+                    window.location.href = 'pago.html';
+                }
+            } catch (err) {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Ingresar';
+                alert('Error al conectar con el servidor: ' + err.message);
+            }
+        });
+    }
+
+    // ===== REGISTRO REAL =====
+    if (formRegisterReal) {
+        formRegisterReal.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nombre = document.getElementById('reg-nombre-u').value.trim();
+            const cedula = document.getElementById('reg-cedula-u').value.trim();
+            const email = document.getElementById('reg-email-u').value.trim();
+            const telefono = document.getElementById('reg-telefono-u').value.trim();
+            const password = document.getElementById('reg-password-u').value;
+            const btnSubmit = document.getElementById('btn-submit-register');
+
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = 'Creando cuenta...';
+
+            try {
+                const nuevoUsuario = {
+                    nombre,
+                    cedula,
+                    email,
+                    telefono,
+                    password,
+                    rol: 'usuario',
+                    activo: true
+                };
+
+                const { data, error } = await db.from('usuarios').insert([nuevoUsuario]).select().single();
+
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Crear Cuenta';
+
+                if (error) {
+                    alert('❌ Error al registrar: ' + (error.message.includes('unique') ? 'La cédula o correo ya se encuentran registrados.' : error.message));
+                    return;
+                }
+
+                localStorage.setItem('unimeta_session', JSON.stringify(data));
+                alert(`🎉 ¡Cuenta creada con éxito! Bienvenido, ${nombre}`);
+                closeModal();
+                window.location.href = 'pago.html';
+            } catch (err) {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = 'Crear Cuenta';
+                alert('Error al procesar registro: ' + err.message);
+            }
+        });
+    }
 });

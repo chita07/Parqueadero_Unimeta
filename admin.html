@@ -17,8 +17,11 @@
                 <span class="logo-text">Panel Administrativo</span>
             </div>
             <div class="header-nav">
+                <a href="anpr.html" class="nav-link-btn highlight-dark">📷 Escáner ANPR</a>
+                <a href="mapa.html" class="nav-link-btn">📍 Mapa en Vivo</a>
+                <a href="cesion.html" class="nav-link-btn">🔄 Cesión de Plazas</a>
                 <span class="admin-badge">👤 Administrador</span>
-                <button class="btn-logout" onclick="window.location.href='index.html'">Cerrar Sesión</button>
+                <button class="btn-logout" onclick="window.location.href='index.html'">🚪 Cerrar Sesión</button>
             </div>
         </div>
     </header>
@@ -95,6 +98,7 @@
                             <th>Tarifa</th>
                             <th>Hora Ingreso</th>
                             <th>Estado</th>
+                            <th>Verificación</th>
                             <th>Monto</th>
                             <th>Acciones</th>
                         </tr>
@@ -298,6 +302,332 @@
                 </div>
             </div>
         </div>
+        <!-- Configuración de Tarifas (Objetivo 1/2) -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="section-title">⚙️ Tarifas del Parqueadero</h2>
+                <button class="btn-unimeta btn-unimeta-primary" id="btn-guardar-tarifas" onclick="guardarTarifasAdmin()">
+                    💾 Guardar Cambios
+                </button>
+            </div>
+            <div class="panel-body panel-body-padded">
+                <p class="panel-subtitle">Personaliza los precios oficiales del estacionamiento. Se sincronizan en tiempo real con la pasarela de pagos.</p>
+                <div class="tarifas-grid">
+                    <!-- Tarifa Hora -->
+                    <div class="tarifa-card">
+                        <div class="tarifa-card-header">
+                            <div class="tarifa-card-icon">⏱️</div>
+                            <div class="tarifa-card-title">
+                                <h4>Por Hora</h4>
+                                <span>Tarifa fraccionada</span>
+                            </div>
+                        </div>
+                        <div class="tarifa-input-wrapper">
+                            <span class="tarifa-currency-prefix">$</span>
+                            <input type="number" id="cfg-tarifa-hora" class="tarifa-input-field" value="1500" min="0" step="500" placeholder="1500">
+                        </div>
+                    </div>
+
+                    <!-- Tarifa Diario -->
+                    <div class="tarifa-card">
+                        <div class="tarifa-card-header">
+                            <div class="tarifa-card-icon" style="background:#FEF3C7;color:#D97706;">☀️</div>
+                            <div class="tarifa-card-title">
+                                <h4>Plan Diario</h4>
+                                <span>Acceso por jornada</span>
+                            </div>
+                        </div>
+                        <div class="tarifa-input-wrapper">
+                            <span class="tarifa-currency-prefix">$</span>
+                            <input type="number" id="cfg-tarifa-diario" class="tarifa-input-field" value="2000" min="0" step="500" placeholder="2000">
+                        </div>
+                    </div>
+
+                    <!-- Tarifa Semanal -->
+                    <div class="tarifa-card">
+                        <div class="tarifa-card-header">
+                            <div class="tarifa-card-icon" style="background:#E0E7FF;color:#4F46E5;">📅</div>
+                            <div class="tarifa-card-title">
+                                <h4>Plan Semanal</h4>
+                                <span>Acceso por 7 días</span>
+                            </div>
+                        </div>
+                        <div class="tarifa-input-wrapper">
+                            <span class="tarifa-currency-prefix">$</span>
+                            <input type="number" id="cfg-tarifa-semanal" class="tarifa-input-field" value="10000" min="0" step="1000" placeholder="10000">
+                        </div>
+                    </div>
+
+                    <!-- Tarifa Mensual -->
+                    <div class="tarifa-card">
+                        <div class="tarifa-card-header">
+                            <div class="tarifa-card-icon" style="background:#DCFCE7;color:#15803D;">🏢</div>
+                            <div class="tarifa-card-title">
+                                <h4>Plan Mensual</h4>
+                                <span>Plaza fija 30 días</span>
+                            </div>
+                        </div>
+                        <div class="tarifa-input-wrapper">
+                            <span class="tarifa-currency-prefix">$</span>
+                            <input type="number" id="cfg-tarifa-mensual" class="tarifa-input-field" value="45000" min="0" step="1000" placeholder="45000">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo de Gestión de Usuarios -->
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h2 class="section-title">👥 Gestión de Usuarios Registrados</h2>
+                </div>
+                <button class="btn-unimeta btn-unimeta-outline" onclick="toggleFormNuevoUsuario()">
+                    + Nuevo Usuario
+                </button>
+            </div>
+            <div class="panel-body">
+                <!-- Formulario nuevo usuario (oculto) -->
+                <div id="form-nuevo-usuario-box" class="hidden" style="padding: 20px 24px 0 24px;">
+                    <div class="modern-form-card">
+                        <div class="modern-form-card-title">
+                            <span>👤</span> Registrar Nuevo Usuario / Conductor
+                        </div>
+                        <div class="modern-grid-3">
+                            <div class="form-group-clean">
+                                <label>Nombre Completo</label>
+                                <input type="text" id="usr-nombre" class="form-input-clean" placeholder="Ej: Juan Pérez">
+                            </div>
+                            <div class="form-group-clean">
+                                <label>Número de Cédula</label>
+                                <input type="text" id="usr-cedula" class="form-input-clean" placeholder="Ej: 1121928374">
+                            </div>
+                            <div class="form-group-clean">
+                                <label>Correo Institucional</label>
+                                <input type="email" id="usr-email" class="form-input-clean" placeholder="correo@unimeta.edu.co">
+                            </div>
+                            <div class="form-group-clean">
+                                <label>Teléfono Celular</label>
+                                <input type="tel" id="usr-telefono" class="form-input-clean" placeholder="Ej: 3101234567">
+                            </div>
+                            <div class="form-group-clean">
+                                <label>Contraseña</label>
+                                <input type="password" id="usr-password" class="form-input-clean" placeholder="••••••••">
+                            </div>
+                            <div class="form-group-clean">
+                                <label>Rol en el Sistema</label>
+                                <select id="usr-rol" class="form-select-clean">
+                                    <option value="usuario">🚗 Conductor / Usuario</option>
+                                    <option value="admin">🛡️ Administrador</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:10px;justify-content:flex-end;">
+                            <button class="btn-unimeta btn-unimeta-secondary" onclick="toggleFormNuevoUsuario()">Cancelar</button>
+                            <button class="btn-unimeta btn-unimeta-primary" onclick="guardarUsuarioAdmin()">💾 Guardar Usuario</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-body" style="padding:0;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Nombre</th>
+                                <th>Cédula</th>
+                                <th>Correo</th>
+                                <th>Teléfono</th>
+                                <th>Rol</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-usuarios">
+                            <!-- Carga dinámica -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo de Reportes Operativos -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2 class="section-title">📊 Generador de Reportes Operativos</h2>
+            </div>
+            <div class="panel-body panel-body-padded">
+                <p class="panel-subtitle">Filtra y exporta métricas de facturación, transacciones y ocupación del parqueadero.</p>
+                <div class="modern-grid-3">
+                    <div class="form-group-clean">
+                        <label for="rep-fecha-desde">Fecha Desde</label>
+                        <input type="date" id="rep-fecha-desde" class="form-input-clean">
+                    </div>
+                    <div class="form-group-clean">
+                        <label for="rep-fecha-hasta">Fecha Hasta</label>
+                        <input type="date" id="rep-fecha-hasta" class="form-input-clean">
+                    </div>
+                    <div class="form-group-clean">
+                        <label for="rep-filtro-tarifa">Filtrar por Plan</label>
+                        <select id="rep-filtro-tarifa" class="form-select-clean">
+                            <option value="">Todos los planes</option>
+                            <option value="hora">⏱️ Por Hora</option>
+                            <option value="diario">☀️ Diario</option>
+                            <option value="semanal">📅 Semanal</option>
+                            <option value="mensual">🏢 Mensual</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:flex;gap:12px;margin-top:10px;flex-wrap:wrap;">
+                    <button class="btn-unimeta btn-unimeta-primary" onclick="generarReporteAdmin()">
+                        🔍 Generar Reporte
+                    </button>
+                    <button class="btn-unimeta btn-unimeta-success" onclick="exportarReporteCSV()">
+                        📥 Exportar CSV / Excel
+                    </button>
+                </div>
+
+                <!-- Resultado de reporte -->
+                <div id="reporte-resultado-box" style="margin-top:24px;display:none;">
+                    <div class="report-kpi-grid">
+                        <div class="report-kpi-card">
+                            <div class="kpi-label">Transacciones</div>
+                            <div class="kpi-value" id="rep-total-transacciones">0</div>
+                        </div>
+                        <div class="report-kpi-card">
+                            <div class="kpi-label">Total Recaudado</div>
+                            <div class="kpi-value" id="rep-total-recaudado" style="color:#059669;">$0</div>
+                        </div>
+                        <div class="report-kpi-card">
+                            <div class="kpi-label">Promedio / Ticket</div>
+                            <div class="kpi-value" id="rep-promedio-ticket" style="color:#E30614;">$0</div>
+                        </div>
+                    </div>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Ref</th>
+                                <th>Placa</th>
+                                <th>Cliente</th>
+                                <th>Plan</th>
+                                <th>Método</th>
+                                <th>Fecha Inicio</th>
+                                <th>Fecha Vence</th>
+                                <th>Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-reporte-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Módulo de Cesión de Plazas (Objetivo 5) -->
+        <div class="panel" id="panel-cesiones">
+            <div class="panel-header">
+                <div>
+                    <h2 class="section-title">🔄 Cesión Temporal de Plazas</h2>
+                </div>
+                <button class="btn-unimeta btn-unimeta-outline" onclick="toggleFormCesion()">
+                    + Nueva Cesión
+                </button>
+            </div>
+            <div class="panel-body">
+                <div style="padding: 20px 24px 0 24px;">
+                    <p class="panel-subtitle">Permite a los mensualistas ausentes ceder temporalmente su cupo para optimizar la ocupación del campus.</p>
+                    
+                    <!-- Formulario de nueva cesión -->
+                    <div id="form-cesion-box" class="hidden">
+                        <div class="modern-form-card" style="background:#EFF6FF;border-color:#BFDBFE;">
+                            <div class="modern-form-card-title" style="color:#1E40AF;border-color:#DBEAFE;">
+                                <span>📋</span> Registrar Ausencia / Cesión de Espacio
+                            </div>
+                            <div class="modern-grid-3">
+                                <div class="form-group-clean">
+                                    <label for="ces-placa">Placa Mensualista</label>
+                                    <input type="text" id="ces-placa" class="form-input-clean" placeholder="Ej: ABC-123" maxlength="7">
+                                </div>
+                                <div class="form-group-clean">
+                                    <label for="ces-fecha">Fecha de Ausencia</label>
+                                    <input type="date" id="ces-fecha" class="form-input-clean">
+                                </div>
+                                <div class="form-group-clean">
+                                    <label for="ces-jornada">Jornada</label>
+                                    <select id="ces-jornada" class="form-select-clean">
+                                        <option value="diurna">☀️ Diurna (6 AM – 1 PM)</option>
+                                        <option value="nocturna">🌙 Nocturna (6 PM – 10 PM)</option>
+                                        <option value="ambas">🕐 Ambas jornadas</option>
+                                    </select>
+                                </div>
+                                <div class="form-group-clean">
+                                    <label for="ces-beneficiario">Placa Beneficiario (opcional)</label>
+                                    <input type="text" id="ces-beneficiario" class="form-input-clean" placeholder="Dejar vacío = cualquiera" maxlength="7">
+                                </div>
+                                <div class="form-group-clean" style="grid-column: span 2;">
+                                    <label for="ces-observacion">Observación / Motivo</label>
+                                    <input type="text" id="ces-observacion" class="form-input-clean" placeholder="Ej: Motivo de ausencia o autorización especial">
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                                <button class="btn-unimeta btn-unimeta-secondary" onclick="toggleFormCesion()">Cancelar</button>
+                                <button class="btn-unimeta btn-unimeta-primary" onclick="guardarCesion()">💾 Guardar Cesión</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de cesiones activas -->
+                <table class="data-table" id="tabla-cesiones-container">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Mensualista</th>
+                            <th>Fecha</th>
+                            <th>Jornada</th>
+                            <th>Beneficiario</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-cesiones">
+                        <tr><td colspan="7" style="text-align:center;padding:2rem;color:#888;">Cargando cesiones...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Módulo de Control de Acceso y Alertas ANPR (Objetivo 4) -->
+        <div class="panel" id="panel-anpr-alertas">
+            <div class="panel-header">
+                <div>
+                    <h2 class="section-title">📷 Control de Acceso Vehicular (ANPR)</h2>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <span class="admin-stat-badge" style="background:#FEF2F2;color:#B91C1C;font-weight:700;">⚠️ Sin pago: <strong id="stat-alertas-sin-pago">0</strong></span>
+                    <span class="admin-stat-badge" style="background:#F0FDF4;color:#15803D;font-weight:700;">✅ Con pago: <strong id="stat-alertas-con-pago">0</strong></span>
+                    <a href="anpr.html" class="btn-unimeta btn-unimeta-primary" style="padding:7px 14px;font-size:13px;">📷 Abrir Escáner ANPR</a>
+                </div>
+            </div>
+            <div class="panel-body">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Placa Identificada</th>
+                            <th>Captura</th>
+                            <th>Estado Pago</th>
+                            <th>Plan / Titular</th>
+                            <th>Confianza OCR</th>
+                            <th>Atendida</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-alertas-anpr">
+                        <tr><td colspan="7" style="text-align:center;padding:2rem;color:#888;">Cargando registros ANPR...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Mapa del Parqueadero -->
         <div class="panel">
             <div class="panel-header">
@@ -311,6 +641,8 @@
                 <div class="admin-leyenda">
                     <div class="leyenda-item"><span class="leyenda-dot" style="background:#2eb85c;"></span> Libre</div>
                     <div class="leyenda-item"><span class="leyenda-dot" style="background:#E30614;"></span> Ocupado</div>
+                    <div class="leyenda-item"><span class="leyenda-dot" style="background:#8B5CF6;"></span> Cedido</div>
+                    <div class="leyenda-item"><span class="leyenda-dot" style="background:#F59E0B;"></span> Reservado</div>
                 </div>
                 <div class="admin-parqueadero" id="admin-parqueadero">
                     <div class="admin-zona admin-zona-sup-izq">

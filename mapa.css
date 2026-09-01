@@ -168,6 +168,14 @@ nav {
     background-color: #FFCD1C;
 }
 
+.leyenda-color.cedida {
+    background-color: #8B5CF6;
+}
+
+.leyenda-color.reservada {
+    background-color: #F59E0B;
+}
+
 /* ===== Mapa Wrapper ===== */
 .mapa-wrapper {
     background: white;
@@ -420,6 +428,32 @@ nav {
     animation: pulseSpot 2s ease-in-out infinite;
     box-shadow: 0 0 0 4px rgba(255, 205, 28, 0.3);
     z-index: 2;
+}
+
+/* Estado: Cedida (espacio de mensualista ausente disponible) */
+.espacio.cedida {
+    background-color: #8B5CF6;
+    color: white;
+    border-color: #7C3AED;
+}
+
+.espacio.cedida:hover {
+    background-color: #7C3AED;
+    transform: scale(1.08);
+    box-shadow: 0 3px 12px rgba(139, 92, 246, 0.35);
+}
+
+/* Estado: Reservada */
+.espacio.reservada {
+    background-color: #F59E0B;
+    color: white;
+    border-color: #D97706;
+}
+
+.espacio.reservada:hover {
+    background-color: #D97706;
+    transform: scale(1.08);
+    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.35);
 }
 
 @keyframes pulseSpot {

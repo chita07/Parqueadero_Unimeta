@@ -1,6 +1,8 @@
 let planSeleccionado = null;
 let precioSeleccionado = 0;
 let nombrePlan = '';
+let precioHoraBase = 1500;
+let tarifasBase = { hora: 1500, diario: 2000, semanal: 10000, mensual: 45000 };
 
 // Jornadas: horarios fijos
 const JORNADAS = {
@@ -27,10 +29,38 @@ function uiAlert(titulo, mensaje, icono = '⚠️') {
     });
 }
 
+// Cargar tarifas dinámicas desde Supabase
+async function cargarTarifas() {
+    try {
+        const { data, error } = await db.from('tarifas').select('*').eq('activo', true);
+        if (!error && data && data.length > 0) {
+            data.forEach(t => {
+                tarifasBase[t.tipo_servicio] = t.precio;
+                const card = document.querySelector(`[data-plan="${t.tipo_servicio}"]`);
+                if (card) {
+                    card.dataset.precio = t.precio;
+                    const priceEl = card.querySelector('.plan-price');
+                    if (priceEl) {
+                        const unit = t.tipo_servicio === 'hora' ? 'hora' : t.tipo_servicio === 'diario' ? 'día' : t.tipo_servicio === 'semanal' ? 'semana' : 'mes';
+                        priceEl.innerHTML = `$${t.precio.toLocaleString('es-CO')} <span>/ ${unit}</span>`;
+                    }
+                }
+            });
+            precioHoraBase = tarifasBase.hora || 1500;
+        }
+    } catch (e) {
+        console.warn('Usando tarifas por defecto:', e);
+    }
+}
+
 // Calcular fecha_fin según tipo de servicio
 function calcularFechaFin(fechaInicio, tipoServicio) {
     const fin = new Date(fechaInicio);
-    if (tipoServicio === 'diario')   fin.setDate(fin.getDate() + 1);
+    if (tipoServicio === 'hora') {
+        const horas = parseInt(document.getElementById('horas-permanencia')?.value || '2');
+        fin.setHours(fin.getHours() + horas);
+    }
+    else if (tipoServicio === 'diario')   fin.setDate(fin.getDate() + 1);
     else if (tipoServicio === 'semanal') fin.setDate(fin.getDate() + 7);
     else if (tipoServicio === 'mensual') fin.setMonth(fin.getMonth() + 1);
     return fin;
@@ -38,18 +68,38 @@ function calcularFechaFin(fechaInicio, tipoServicio) {
 
 function seleccionarPlan(plan, precio, nombre) {
     planSeleccionado = plan;
-    precioSeleccionado = precio;
+    const precioBase = tarifasBase[plan] || precio;
     nombrePlan = nombre;
 
+    const groupHoras = document.getElementById('group-horas');
+    if (plan === 'hora') {
+        groupHoras.classList.remove('hidden');
+        const horas = parseInt(document.getElementById('horas-permanencia').value || '2');
+        precioSeleccionado = precioBase * horas;
+    } else {
+        groupHoras.classList.add('hidden');
+        precioSeleccionado = precioBase;
+    }
+
     document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected'));
-    document.querySelector(`[data-plan="${plan}"]`).classList.add('selected');
+    const cardSelected = document.querySelector(`[data-plan="${plan}"]`);
+    if (cardSelected) cardSelected.classList.add('selected');
 
     document.getElementById('resumen-tipo').textContent = nombre;
     document.getElementById('resumen-servicio').textContent = 'Moto - Tarifa ' + nombre;
-    document.getElementById('resumen-total').textContent = '$' + precio.toLocaleString('es-CO');
+    document.getElementById('resumen-total').textContent = '$' + precioSeleccionado.toLocaleString('es-CO');
 
     document.getElementById('step-pago').classList.remove('hidden');
     document.getElementById('step-pago').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function cambiarHoras() {
+    if (planSeleccionado === 'hora') {
+        const horas = parseInt(document.getElementById('horas-permanencia').value || '1');
+        const base = tarifasBase['hora'] || 1500;
+        precioSeleccionado = base * horas;
+        document.getElementById('resumen-total').textContent = '$' + precioSeleccionado.toLocaleString('es-CO');
+    }
 }
 
 document.getElementById('placa').addEventListener('input', function () {
@@ -59,22 +109,6 @@ document.getElementById('placa').addEventListener('input', function () {
 
 // ===== Verificar capacidad disponible para esa jornada =====
 const TOTAL_ESPACIOS = 33;
-
-async function verificarCuposDisponibles(jornada) {
-    const ahora = new Date().toISOString();
-    // Contar pagos activos con esa jornada
-    const { data, error } = await db
-        .from('pagos')
-        .select('id', { count: 'exact', head: true })
-        .eq('jornada', jornada)
-        .gt('fecha_fin', ahora);
-
-    if (error) {
-        console.warn('Error verificando cupos:', error.message);
-        return true; // permitir si hay error para no bloquear
-    }
-    return (data?.length ?? 0) < TOTAL_ESPACIOS;
-}
 
 async function contarSuscripcionesJornada(jornada) {
     const ahora = new Date().toISOString();
@@ -120,28 +154,48 @@ async function confirmarPago() {
 
     btnConfirmar.textContent = 'Procesando...';
 
-    const metodoNombres = { nequi: 'Nequi', pse: 'PSE', tarjeta: 'Tarjeta de Crédito/Débito' };
+    const metodoNombres = { nequi: 'Nequi', daviplata: 'Daviplata', pse: 'PSE', tarjeta: 'Tarjeta de Crédito/Débito' };
     const ref        = 'PQ-' + Date.now().toString().slice(-8);
     const fechaInicio = new Date();
     const fechaFin   = calcularFechaFin(fechaInicio, planSeleccionado);
+    const horasEstimadas = planSeleccionado === 'hora' ? parseInt(document.getElementById('horas-permanencia').value || '2') : null;
 
-    const pagoData = {
-        placa:          placa.toUpperCase(),
+    const session = JSON.parse(localStorage.getItem('unimeta_session') || 'null');
+
+    // Datos base del pago (siempre compatibles con la estructura original)
+    const pagoDataBase = {
+        placa:           placa.toUpperCase(),
         nombre,
         cedula,
         telefono,
-        tipo_servicio:  planSeleccionado,
-        precio:         precioSeleccionado,
-        metodo_pago:    metodo.value,
-        referencia:     ref,
-        fecha_inicio:   fechaInicio.toISOString(),
-        fecha_fin:      fechaFin.toISOString(),
-        estado:         'activo',
-        jornada:        jornada
-        // NO se asigna espacio_numero aquí — se asigna al hacer check-in en el mapa
+        tipo_servicio:   planSeleccionado,
+        precio:          precioSeleccionado,
+        metodo_pago:     metodo.value,
+        referencia:      ref,
+        fecha_inicio:    fechaInicio.toISOString(),
+        fecha_fin:       fechaFin.toISOString(),
+        estado:          'activo',
+        jornada:         jornada,
+        horas_estimadas: horasEstimadas
     };
 
-    const { data, error } = await db.from('pagos').insert([pagoData]).select();
+    // Intentar primero con columnas de trazabilidad (Obj. 3)
+    // Si falla por columna inexistente, reintentar sin ellas
+    let data, error;
+
+    const pagoDataCompleto = {
+        ...pagoDataBase,
+        usuario_id:          session ? session.id : null,
+        estado_verificacion: 'verificado'
+    };
+
+    ({ data, error } = await db.from('pagos').insert([pagoDataCompleto]).select());
+
+    // Fallback: si el error es por columna no encontrada, reintentar con datos base
+    if (error && (error.message.includes('estado_verificacion') || error.message.includes('usuario_id') || error.message.includes('schema cache'))) {
+        console.warn('Columnas de trazabilidad no disponibles aún. Insertando sin ellas...');
+        ({ data, error } = await db.from('pagos').insert([pagoDataBase]).select());
+    }
 
     btnConfirmar.disabled = false;
     btnConfirmar.textContent = 'Confirmar Pago';
@@ -153,15 +207,24 @@ async function confirmarPago() {
     }
 
     // Mostrar confirmación
-    document.getElementById('conf-plan').textContent   = nombrePlan;
+    const textoPlanDisplay = planSeleccionado === 'hora' ? `${nombrePlan} (${horasEstimadas}h)` : nombrePlan;
+    document.getElementById('conf-plan').textContent   = textoPlanDisplay;
     document.getElementById('conf-placa').textContent  = placa.toUpperCase();
     document.getElementById('conf-nombre').textContent = nombre;
     document.getElementById('conf-total').textContent  = '$' + precioSeleccionado.toLocaleString('es-CO');
-    document.getElementById('conf-metodo').textContent = metodoNombres[metodo.value];
+    document.getElementById('conf-metodo').textContent = metodoNombres[metodo.value] || metodo.value;
     document.getElementById('conf-ref').textContent    = ref;
     document.getElementById('conf-jornada').textContent = JORNADAS[jornada].label;
 
     window._pagoRef = ref;
+
+  // Notificar a otras pestañas/ventanas (panel admin) del nuevo pago
+  try {
+    localStorage.setItem('unimeta_nuevo_pago', JSON.stringify({ ref, placa: placa.toUpperCase(), ts: Date.now() }));
+    if (window.BroadcastChannel) {
+      new BroadcastChannel('unimeta_channel').postMessage({ tipo: 'nuevo_pago', ref });
+    }
+  } catch(e) {}
 
     document.getElementById('step-servicio').classList.add('hidden');
     document.getElementById('step-pago').classList.add('hidden');
@@ -180,8 +243,9 @@ function verMiEspacio() {
     location.href = ref ? 'mapa.html?ref=' + encodeURIComponent(ref) : 'mapa.html';
 }
 
-// Auto-select plan desde URL
-document.addEventListener('DOMContentLoaded', function () {
+// Auto-select plan desde URL y cargar tarifas
+document.addEventListener('DOMContentLoaded', async () => {
+    await cargarTarifas();
     const params = new URLSearchParams(window.location.search);
     const plan   = params.get('plan');
     const precio = params.get('precio');

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Control de Acceso ANPR - Parqueadero Unimeta</title>
+    <link rel="stylesheet" href="anpr.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <a href="index.html"><img src="imagenes/logo_unimeta.png" alt="Logo Unimeta" class="logo-img"></a>
+                <span class="logo-text">Control de Acceso — Simulación ANPR</span>
+            </div>
+            <nav>
+                <a href="admin.html" class="btn-nav">← Panel Admin</a>
+                <a href="mapa.html" class="btn-nav">📍 Mapa</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="anpr-container">
+        <!-- Hero & Info -->
+        <div class="anpr-hero">
+            <h1>📷 Reconocimiento Automático de Placas</h1>
+            <p>Prototipo de control de acceso vehicular asistido por procesamiento de imagen y OCR (Tesseract.js). Escanea placas en tiempo real o carga fotografías para verificar pagos vigentes y registrar accesos.</p>
+        </div>
+
+        <!-- Selector de Modo -->
+        <div class="modo-card">
+            <div class="modo-buttons">
+                <button type="button" class="btn-modo active" id="btn-modo-camara" onclick="activarCamara()">
+                    <span class="modo-icon">📹</span>
+                    <span class="modo-txt">Cámara en Vivo</span>
+                </button>
+                <button type="button" class="btn-modo" id="btn-modo-archivo" onclick="activarArchivo()">
+                    <span class="modo-icon">📁</span>
+                    <span class="modo-txt">Cargar Imagen / Foto</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Área de Captura -->
+        <div class="captura-card">
+            <!-- Cámara en vivo -->
+            <div id="camara-box" class="captura-box">
+                <div class="video-wrapper">
+                    <video id="video-preview" autoplay playsinline muted></video>
+                    <div class="scan-overlay">
+                        <div class="scan-target-box">
+                            <span class="scan-corner top-left"></span>
+                            <span class="scan-corner top-right"></span>
+                            <span class="scan-corner bottom-left"></span>
+                            <span class="scan-corner bottom-right"></span>
+                            <span class="scan-line"></span>
+                            <span class="scan-text">Enfoca la placa aquí</span>
+                        </div>
+                    </div>
+                </div>
+                <canvas id="canvas-captura" style="display:none;"></canvas>
+                <div class="captura-controls">
+                    <button type="button" class="btn-capturar" id="btn-capturar" onclick="capturarFoto()">
+                        📸 Capturar Fotografía
+                    </button>
+                </div>
+            </div>
+
+            <!-- Carga de archivo -->
+            <div id="archivo-box" class="captura-box hidden">
+                <label for="input-imagen" class="drop-zone" id="drop-zone">
+                    <div class="drop-zone-content">
+                        <span class="drop-icon">📤</span>
+                        <h3>Arrastra una fotografía de la placa aquí</h3>
+                        <p>o haz clic para seleccionar desde tu dispositivo (JPG, PNG)</p>
+                    </div>
+                    <input type="file" id="input-imagen" accept="image/*" onchange="cargarArchivoImagen(event)">
+                </label>
+            </div>
+
+            <!-- Vista previa de imagen capturada -->
+            <div id="preview-box" class="captura-box hidden">
+                <div class="preview-header">
+                    <h3>🖼️ Imagen Capturada</h3>
+                    <span class="badge-modo" id="badge-modo">Cámara</span>
+                </div>
+                <div class="preview-img-wrapper">
+                    <img id="img-preview" alt="Vista previa de captura">
+                </div>
+                <div class="preview-actions">
+                    <button type="button" class="btn-procesar" id="btn-procesar" onclick="procesarPlaca()">
+                        ⚡ Extraer Placa con OCR
+                    </button>
+                    <button type="button" class="btn-nueva-captura" onclick="reiniciarCaptura()">
+                        🔄 Nueva Captura
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área de Resultados y Verificación -->
+        <div class="resultado-area hidden" id="resultado-area">
+            <!-- Spinner / Progreso OCR -->
+            <div id="ocr-procesando" class="ocr-status-card hidden">
+                <div class="spinner"></div>
+                <h3>Procesando imagen con OCR...</h3>
+                <p>Extrayendo caracteres alfanuméricos en el navegador.</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="ocr-progress"></div>
+                </div>
+                <span class="progress-pct" id="ocr-progress-pct">0%</span>
+            </div>
+
+            <!-- Placa Detectada -->
+            <div id="placa-detectada-box" class="placa-result-card hidden">
+                <div class="placa-card-top">
+                    <span class="ocr-badge">Lectura Automática</span>
+                    <span class="ocr-confidence">Confianza OCR: <strong id="ocr-confianza-valor">0%</strong></span>
+                </div>
+
+                <div class="placa-display-container">
+                    <div class="colombia-plate" id="placa-display">
+                        <div class="plate-country">COLOMBIA</div>
+                        <div class="plate-code" id="placa-code-text">--- ---</div>
+                        <div class="plate-city">VILLAVICENCIO</div>
+                    </div>
+                </div>
+
+                <div class="ocr-raw-info hidden" id="ocr-raw-info">
+                    <small>Texto crudo detectado por OCR: <code id="ocr-raw-text"></code></small>
+                </div>
+
+                <!-- Corrección Manual -->
+                <div class="correccion-container">
+                    <label for="placa-corregida">¿La lectura automática no es exacta? Corrige la placa:</label>
+                    <div class="correccion-input-group">
+                        <input type="text" id="placa-corregida" maxlength="7" placeholder="Ej: ABC123" oninput="this.value = this.value.toUpperCase()">
+                        <button type="button" class="btn-verificar" id="btn-verificar-pago" onclick="verificarPago()">
+                            🔍 Validar en Base de Datos
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarjeta de Estado de Pago -->
+            <div id="verificacion-resultado" class="verificacion-card hidden"></div>
+        </div>
+
+        <!-- Historial de Escaneos -->
+        <div class="historial-card">
+            <div class="historial-header">
+                <h2>📋 Registro de Escaneos y Accesos Recientes</h2>
+                <button type="button" class="btn-refresh-historial" onclick="cargarHistorial()">🔄 Actualizar</button>
+            </div>
+            <div class="historial-lista" id="historial-lista">
+                <div class="loading-historial">Cargando registros...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Custom UI Dialogs -->
+    <div class="custom-dialog-overlay hidden" id="custom-dialog-overlay">
+        <div class="custom-dialog">
+            <div class="custom-dialog-icon" id="custom-dialog-icon">⚠️</div>
+            <h3 class="custom-dialog-title" id="custom-dialog-title">Mensaje</h3>
+            <p class="custom-dialog-msg" id="custom-dialog-msg"></p>
+            <div class="custom-dialog-actions" id="custom-dialog-actions"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Universidad del Meta — Parqueadero Unimeta. Prototipo de Reconocimiento de Placas (ANPR).</p>
+    </footer>
+
+    <!-- Tesseract.js v5 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="db.js"></script>
+    <script src="anpr.js"></script>
+</body>
+
+</html>

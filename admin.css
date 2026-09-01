@@ -47,41 +47,92 @@ header {
 .logo-text {
     color: white;
     font-size: 18px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.5px;
+    font-size: 19px;
 }
 
 .header-nav {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.nav-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: rgba(255, 255, 255, 0.18);
+    color: #FFFFFF !important;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(8px);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.nav-link-btn:hover {
+    background: #FFFFFF;
+    color: #E30614 !important;
+    border-color: #FFFFFF;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.nav-link-btn.highlight-dark {
+    background: #111827;
+    border-color: #374151;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.nav-link-btn.highlight-dark:hover {
+    background: #1F2937;
+    color: #FFFFFF !important;
+    border-color: #4B5563;
 }
 
 .admin-badge {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 6px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.25);
+    color: #FFFFFF;
+    padding: 8px 16px;
     border-radius: 20px;
     font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .btn-logout {
     background-color: transparent;
-    color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 8px 18px;
-    border-radius: 6px;
+    color: #FFFFFF;
+    border: 1.5px solid rgba(255, 255, 255, 0.45);
+    padding: 8px 16px;
+    border-radius: 8px;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
     font-size: 13px;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
 }
 
 .btn-logout:hover {
-    background-color: white;
+    background-color: #FFFFFF;
     color: #E30614;
+    border-color: #FFFFFF;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
 }
 
 /* ===== Main Layout ===== */
@@ -221,6 +272,18 @@ header {
     background: #E30614;
     color: white;
     border-color: #b80510;
+}
+
+.admin-espacio.cedida {
+    background: #8B5CF6;
+    color: white;
+    border-color: #7C3AED;
+}
+
+.admin-espacio.reservada {
+    background: #F59E0B;
+    color: white;
+    border-color: #D97706;
 }
 
 .admin-espacio:hover {
@@ -1449,7 +1512,7 @@ footer p {
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(3px);
+    backdrop-filter: blur(4px);
     z-index: 9999;
     display: flex;
     align-items: center;
@@ -1465,11 +1528,11 @@ footer p {
 .custom-dialog {
     background: white;
     border-radius: 16px;
-    padding: 30px;
+    padding: 32px 28px;
     text-align: center;
-    max-width: 380px;
+    max-width: 400px;
     width: 100%;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
     animation: scaleIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -1485,19 +1548,19 @@ footer p {
 
 .custom-dialog-icon {
     font-size: 48px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
 }
 
 .custom-dialog-title {
     font-size: 20px;
     font-weight: 700;
-    color: #333;
-    margin-bottom: 12px;
+    color: #111827;
+    margin-bottom: 10px;
 }
 
 .custom-dialog-msg {
     font-size: 14px;
-    color: #666;
+    color: #4B5563;
     margin-bottom: 24px;
     line-height: 1.5;
 }
@@ -1509,10 +1572,10 @@ footer p {
 }
 
 .custom-dialog-btn {
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: 11px 20px;
+    border-radius: 10px;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
     font-family: inherit;
     transition: all 0.2s ease;
@@ -1521,20 +1584,411 @@ footer p {
 }
 
 .custom-dialog-btn-primary {
-    background: linear-gradient(135deg, #E30614, #b80510);
+    background: linear-gradient(135deg, #E30614, #B91C1C);
     color: white;
+    box-shadow: 0 4px 12px rgba(227, 6, 20, 0.25);
 }
 
 .custom-dialog-btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(227, 6, 20, 0.3);
+    box-shadow: 0 6px 16px rgba(227, 6, 20, 0.35);
 }
 
 .custom-dialog-btn-secondary {
-    background: #f0f0f0;
-    color: #555;
+    background: #F3F4F6;
+    color: #4B5563;
 }
 
 .custom-dialog-btn-secondary:hover {
-    background: #e4e4e4;
+    background: #E5E7EB;
+    color: #111827;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================================================
+   MODERN DESIGN SYSTEM — Panels, Forms, Tables & Cards Overhaul
+   ========================================================================== */
+
+.panel-body-padded {
+    padding: 24px 28px;
+}
+
+.panel-subtitle {
+    font-size: 14px;
+    color: #6B7280;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+/* Tarifa Cards Grid */
+.tarifas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.tarifa-card {
+    background: #FFFFFF;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 14px;
+    padding: 20px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.tarifa-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #E5E7EB;
+    transition: background 0.25s ease;
+}
+
+.tarifa-card:hover {
+    border-color: #E30614;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(227, 6, 20, 0.08);
+}
+
+.tarifa-card:hover::before {
+    background: linear-gradient(90deg, #E30614, #FFCD1C);
+}
+
+.tarifa-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.tarifa-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: #FEE2E2;
+    color: #E30614;
+}
+
+.tarifa-card-title h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 2px;
+}
+
+.tarifa-card-title span {
+    font-size: 12px;
+    color: #9CA3AF;
+}
+
+.tarifa-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.tarifa-currency-prefix {
+    position: absolute;
+    left: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #6B7280;
+    pointer-events: none;
+}
+
+.tarifa-input-field {
+    width: 100%;
+    padding: 12px 14px 12px 34px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    background: #F9FAFB;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 10px;
+    outline: none;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.tarifa-input-field:focus {
+    background: #FFFFFF;
+    border-color: #E30614;
+    box-shadow: 0 0 0 3px rgba(227, 6, 20, 0.12);
+}
+
+/* Modern Action Buttons */
+.btn-unimeta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.btn-unimeta-primary {
+    background: linear-gradient(135deg, #E30614 0%, #B91C1C 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(227, 6, 20, 0.25);
+}
+
+.btn-unimeta-primary:hover {
+    background: linear-gradient(135deg, #c20410 0%, #991B1B 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(227, 6, 20, 0.35);
+}
+
+.btn-unimeta-secondary {
+    background: #FFFFFF;
+    color: #374151;
+    border: 1.5px solid #E5E7EB;
+}
+
+.btn-unimeta-secondary:hover {
+    background: #F9FAFB;
+    border-color: #D1D5DB;
+    color: #111827;
+}
+
+.btn-unimeta-success {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+}
+
+.btn-unimeta-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.35);
+}
+
+.btn-unimeta-dark {
+    background: #1F2937;
+    color: white;
+}
+
+.btn-unimeta-dark:hover {
+    background: #111827;
+    transform: translateY(-1px);
+}
+
+.btn-unimeta-outline {
+    background: transparent;
+    border: 1.5px solid #E30614;
+    color: #E30614;
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.btn-unimeta-outline:hover {
+    background: #E30614;
+    color: white;
+    transform: translateY(-1px);
+}
+
+/* Modern Form Containers */
+.modern-form-card {
+    background: #F9FAFB;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 24px;
+    animation: fadeIn 0.25s ease;
+}
+
+.modern-form-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.modern-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.form-group-clean {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group-clean label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #4B5563;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.form-input-clean,
+.form-select-clean {
+    width: 100%;
+    padding: 11px 14px;
+    font-size: 14px;
+    color: #111827;
+    background: #FFFFFF;
+    border: 1.5px solid #D1D5DB;
+    border-radius: 9px;
+    outline: none;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.form-input-clean:focus,
+.form-select-clean:focus {
+    border-color: #E30614;
+    box-shadow: 0 0 0 3px rgba(227, 6, 20, 0.12);
+}
+
+/* Colombian Plate Tag */
+.plate-badge-colombia {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #FEEF8B;
+    color: #1E293B;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 2px solid #0F172A;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* User Table Badges & Rows */
+.user-avatar-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #F3F4F6;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #E5E7EB;
+}
+
+.role-badge-admin {
+    background: #EDE9FE;
+    color: #6D28D9;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+}
+
+.role-badge-user {
+    background: #E0F2FE;
+    color: #0369A1;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+}
+
+.status-dot-active {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #059669;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.status-dot-active::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10B981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+/* Reports KPI Cards */
+.report-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.report-kpi-card {
+    background: #FFFFFF;
+    border: 1.5px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.report-kpi-card .kpi-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #6B7280;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+
+.report-kpi-card .kpi-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #111827;
+}
+
+/* Table Header Polish */
+.data-table thead th {
+    background: #F8FAFC;
+    color: #475569;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.8px;
+    padding: 14px 18px;
+    border-bottom: 1.5px solid #E2E8F0;
+}
+
+.data-table tbody td {
+    padding: 14px 18px;
+    border-bottom: 1px solid #F1F5F9;
+    color: #1E293B;
+}
+
+.data-table tbody tr:hover {
+    background: #F8FAFC;
 }

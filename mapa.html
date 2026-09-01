@@ -17,7 +17,8 @@
             </div>
             <nav>
                 <a href="index.html" class="btn-nav">Inicio</a>
-                <a href="pago.html" class="btn-nav btn-nav-primary">Reservar</a>
+                <a href="cesion.html" class="btn-nav">Cesión</a>
+                <a href="pago.html" class="btn-nav btn-nav-primary">Tarifas / Pago</a>
             </nav>
         </div>
     </header>
@@ -75,6 +76,14 @@
             <div class="leyenda-item">
                 <span class="leyenda-color mi-espacio"></span>
                 <span>Tu espacio</span>
+            </div>
+            <div class="leyenda-item">
+                <span class="leyenda-color cedida"></span>
+                <span>Cedido hoy</span>
+            </div>
+            <div class="leyenda-item">
+                <span class="leyenda-color reservada"></span>
+                <span>Reservado</span>
             </div>
         </div>
 
@@ -216,6 +225,8 @@
                     <span class="temp-texto">Tiempo restante: </span>
                     <span class="temp-valor" id="temp-valor">--</span>
                 </div>
+
+                <button class="btn-salida-usuario" id="btn-registrar-salida-mi" onclick="registrarSalidaMiEspacio()" style="margin-top:15px;width:100%;background:#e63946;color:white;border:none;padding:12px;border-radius:8px;font-weight:700;font-size:15px;cursor:pointer;">🚪 Registrar mi Salida (Checkout)</button>
             </div>
         </div>
 

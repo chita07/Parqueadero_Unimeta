@@ -8,6 +8,8 @@ const JORNADAS = {
 };
 
 let checkinsMapa = {};  // { espacio_numero: checkin }
+let cesionesMapa = {};  // { espacio_numero: cesion } — cedidas hoy
+let reservasMapa = {};  // { espacio_numero: reserva } — reservadas hoy
 let miCheckin = null;
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -71,13 +73,17 @@ async function limpiarCheckinsPasados() {
     await db.from('checkins').delete().lt('auto_liberar_a', ahora);
 }
 
-// ===== Cargar datos: check-ins activos =====
+// ===== Cargar datos: check-ins activos + cesiones + reservas de hoy =====
 async function cargarDatos() {
     const ahora = new Date().toISOString();
+    const hoy = new Date().toISOString().slice(0, 10);
+
+    // 1. Check-ins activos
     const { data, error } = await db
         .from('checkins')
         .select('*')
-        .gt('auto_liberar_a', ahora);
+        .gt('auto_liberar_a', ahora)
+        .is('fecha_salida', null);
 
     if (error) {
         console.warn('Error cargando check-ins:', error.message);
@@ -89,17 +95,41 @@ async function cargarDatos() {
     checkinsMapa = {};
     (data || []).forEach(c => { checkinsMapa[c.espacio_numero] = c; });
 
+    // 2. Cesiones activas para hoy
+    cesionesMapa = {};
+    const { data: cesiones } = await db
+        .from('cesiones_plaza')
+        .select('*')
+        .eq('fecha_ausencia', hoy)
+        .eq('estado', 'activa');
+    (cesiones || []).forEach(c => {
+        if (c.espacio_numero) cesionesMapa[c.espacio_numero] = c;
+    });
+
+    // 3. Reservas activas para hoy
+    reservasMapa = {};
+    const { data: reservas } = await db
+        .from('reservas')
+        .select('*')
+        .eq('fecha_reserva', hoy)
+        .eq('estado', 'reservada');
+    (reservas || []).forEach(r => {
+        reservasMapa[r.espacio_numero] = r;
+    });
+
     renderizarEspacios();
     actualizarContador();
 }
 
-// ===== Renderizar espacios =====
+// ===== Renderizar espacios (5 estados: libre, ocupado, mi-espacio, cedida, reservada) =====
 function renderizarEspacios() {
     document.querySelectorAll('.espacio').forEach(el => {
         const numero = parseInt(el.dataset.numero);
-        const checkin = checkinsMapa[numero];
+        const checkin  = checkinsMapa[numero];
+        const cesion   = cesionesMapa[numero];
+        const reserva  = reservasMapa[numero];
 
-        el.classList.remove('libre', 'ocupado', 'mi-espacio');
+        el.classList.remove('libre', 'ocupado', 'mi-espacio', 'cedida', 'reservada');
 
         let esMio = false;
         if (checkin && miCheckin && checkin.id === miCheckin.id) esMio = true;
@@ -109,12 +139,16 @@ function renderizarEspacios() {
             setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
         } else if (checkin) {
             el.classList.add('ocupado');
+        } else if (cesion) {
+            el.classList.add('cedida');
+        } else if (reserva) {
+            el.classList.add('reservada');
         } else {
             el.classList.add('libre');
         }
 
         const nuevo = el.cloneNode(true);
-        nuevo.addEventListener('click', () => handleClick(numero, checkin));
+        nuevo.addEventListener('click', () => handleClick(numero, checkin, cesion, reserva));
         el.parentNode.replaceChild(nuevo, el);
     });
 }
@@ -174,12 +208,13 @@ async function realizarCheckin() {
 
     const pago = pagos[0];
 
-    // 2. Verificar que no tenga ya un check-in activo hoy
+    // 2. Verificar que no tenga ya un check-in activo hoy (sin salida)
     const { data: checkinExistente } = await db
         .from('checkins')
         .select('*')
         .ilike('placa', placa)
         .gt('auto_liberar_a', ahora)
+        .is('fecha_salida', null)
         .limit(1);
 
     if (checkinExistente && checkinExistente.length > 0) {
@@ -292,11 +327,13 @@ function iniciarTemporizador(fechaFin) {
 }
 
 // ===== Click en espacio =====
-function handleClick(numero, checkin) {
+function handleClick(numero, checkin, cesion, reserva) {
     if (checkin) mostrarTooltip(numero, checkin);
+    else if (cesion) mostrarTooltipCesion(numero, cesion);
+    else if (reserva) mostrarTooltipReserva(numero, reserva);
 }
 
-// ===== Tooltip =====
+// ===== Tooltip espacio ocupado =====
 function mostrarTooltip(numero, checkin) {
     document.getElementById('tooltip-num').textContent     = numero;
     document.getElementById('tooltip-usuario').textContent = checkin.nombre || '—';
@@ -317,8 +354,77 @@ function mostrarTooltip(numero, checkin) {
     overlay.classList.remove('hidden');
 }
 
+// ===== Tooltip espacio cedido =====
+function mostrarTooltipCesion(numero, cesion) {
+    document.getElementById('tooltip-num').textContent     = numero;
+    document.getElementById('tooltip-usuario').textContent = cesion.placa_mensualista + ' (ausente)';
+    document.getElementById('tooltip-placa').textContent   = cesion.placa_beneficiario || 'Abierto';
+    document.getElementById('tooltip-plan').textContent    = cesion.jornada === 'diurna' ? '☀️ Diurna cedida' : '🌙 Nocturna cedida';
+    document.getElementById('tooltip-estado').textContent  = '🔄 Cedido';
+    document.getElementById('tooltip-estado').style.color  = '#8B5CF6';
+    document.getElementById('tooltip-espacio').classList.remove('hidden');
+
+    let overlay = document.querySelector('.tooltip-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'tooltip-overlay';
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', cerrarTooltip);
+    }
+    overlay.classList.remove('hidden');
+}
+
+// ===== Tooltip espacio reservado =====
+function mostrarTooltipReserva(numero, reserva) {
+    document.getElementById('tooltip-num').textContent     = numero;
+    document.getElementById('tooltip-usuario').textContent = reserva.placa || '—';
+    document.getElementById('tooltip-placa').textContent   = reserva.placa || '—';
+    document.getElementById('tooltip-plan').textContent    = reserva.jornada === 'diurna' ? '☀️ Diurna reservada' : '🌙 Nocturna reservada';
+    document.getElementById('tooltip-estado').textContent  = '🟡 Reservado';
+    document.getElementById('tooltip-estado').style.color  = '#F59E0B';
+    document.getElementById('tooltip-espacio').classList.remove('hidden');
+
+    let overlay = document.querySelector('.tooltip-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'tooltip-overlay';
+        document.body.appendChild(overlay);
+        overlay.addEventListener('click', cerrarTooltip);
+    }
+    overlay.classList.remove('hidden');
+}
+
 function cerrarTooltip() {
     document.getElementById('tooltip-espacio').classList.add('hidden');
     const ov = document.querySelector('.tooltip-overlay');
     if (ov) ov.classList.add('hidden');
+}
+
+// ===== Registrar salida del usuario =====
+async function registrarSalidaMiEspacio() {
+    if (!miCheckin) {
+        alert('No tienes un espacio asignado activo.');
+        return;
+    }
+
+    const confirmacion = confirm(`¿Confirmas la salida de tu vehículo (${miCheckin.placa}) del espacio #${miCheckin.espacio_numero}?`);
+    if (!confirmacion) return;
+
+    const ahoraIso = new Date().toISOString();
+    const { error } = await db
+        .from('checkins')
+        .update({ fecha_salida: ahoraIso })
+        .eq('id', miCheckin.id);
+
+    if (error) {
+        alert('Error al registrar salida: ' + error.message);
+        return;
+    }
+
+    alert(`✅ Salida registrada exitosamente. Espacio #${miCheckin.espacio_numero} liberado.`);
+    miCheckin = null;
+    document.getElementById('panel-reserva').classList.add('hidden');
+    document.getElementById('checkin-resultado').classList.add('hidden');
+    document.getElementById('checkin-placa').value = '';
+    await cargarDatos();
 }
