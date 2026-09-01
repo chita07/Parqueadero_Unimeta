@@ -30,10 +30,21 @@ export default async function handler(req, res) {
 
         if (geminiKey) {
             try {
-                const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': geminiKey
+                };
+                if (geminiKey.startsWith('AQ.')) {
+                    headers['Authorization'] = `Bearer ${geminiKey}`;
+                }
+
+                const urlNoKey = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+                const urlWithKey = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
+                const testUrl = geminiKey.startsWith('AQ.') ? urlNoKey : urlWithKey;
+
                 const tRes = await fetch(testUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     body: JSON.stringify({
                         contents: [{ parts: [{ text: 'Hola, responde OK' }] }]
                     })
@@ -116,12 +127,23 @@ Instrucciones estrictas:
                 let plateResult = null;
                 let usedModel = null;
 
+                const headers = {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': geminiKey
+                };
+                if (geminiKey.startsWith('AQ.')) {
+                    headers['Authorization'] = `Bearer ${geminiKey}`;
+                }
+
                 for (const model of models) {
                     try {
-                        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+                        const url = geminiKey.startsWith('AQ.')
+                            ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+                            : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+
                         const response = await fetch(url, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: headers,
                             body: JSON.stringify({
                                 contents: [{
                                     parts: [
