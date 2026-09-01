@@ -67,11 +67,11 @@ Instrucciones estrictas:
 - Si no hay una placa identificable, responde exactamente "NO_DETECTADA".
 - NO incluyas explicaciones, markdown, etiquetas ni formato adicional. Solo el código de placa.`;
 
-        // 1. Probar Google Gemini API (2.5 Flash / 1.5 Flash)
+        // 1. Probar Google Gemini API
         if (geminiKey) {
+            let ultimoErrorGemini = '';
             try {
-                // Probar modelos con soporte multimodal activo en v1beta
-                const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+                const models = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-pro'];
                 let plateResult = null;
                 let usedModel = null;
 
@@ -86,8 +86,8 @@ Instrucciones estrictas:
                                     parts: [
                                         { text: prompt },
                                         {
-                                            inline_data: {
-                                                mime_type: mimeType,
+                                            inlineData: {
+                                                mimeType: mimeType,
                                                 data: base64Data
                                             }
                                         }
@@ -110,9 +110,11 @@ Instrucciones estrictas:
                             }
                         } else {
                             const errBody = await response.text();
-                            console.warn(`Gemini ${model} error:`, response.status, errBody);
+                            ultimoErrorGemini = `[${model} status ${response.status}]: ${errBody}`;
+                            console.warn(`Gemini ${model} error:`, ultimoErrorGemini);
                         }
                     } catch (mErr) {
+                        ultimoErrorGemini = `[${model} catch]: ${mErr.message}`;
                         console.warn(`Error llamando a Gemini ${model}:`, mErr.message);
                     }
                 }
@@ -127,9 +129,11 @@ Instrucciones estrictas:
                         motor: `IA Gemini (${usedModel})`,
                         confianza: cleaned.esValida ? 98 : 40
                     });
+                } else {
+                    console.warn('Gemini no produjo resultado válido. Último error:', ultimoErrorGemini);
                 }
             } catch (gErr) {
-                console.warn('Error procesando con Gemini:', gErr);
+                console.warn('Error general en bloque Gemini:', gErr);
             }
         }
 
