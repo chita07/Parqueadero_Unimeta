@@ -190,7 +190,7 @@ nav {
 /* ===== PARQUEADERO — Asfalto Premium ===== */
 .parqueadero {
     display: grid;
-    grid-template-columns: 155px 1fr 90px;
+    grid-template-columns: 94px 1fr 90px;
     grid-template-rows: auto auto auto auto auto auto auto;
     gap: 10px;
     min-width: 360px;
@@ -241,8 +241,15 @@ nav {
     border: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Zone grid positioning */
-.zona-sup-izq { grid-column: 1; grid-row: 1; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; }
+/* Zone grid positioning — Pared Izquierda (A, D, E) y Pared Derecha (C) */
+.zona-sup-izq { 
+    grid-column: 1; 
+    grid-row: 1; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start;
+    gap: 5px;
+}
 .zona-sup-der { 
     grid-column: 2; 
     grid-row: 1; 
@@ -254,9 +261,29 @@ nav {
     padding-top: 10px; 
     padding-bottom: 6px; 
 }
-.zona-der     { grid-column: 3; grid-row: 1 / 8; flex-direction: column; align-items: center; }
-.zona-izq     { grid-column: 1; grid-row: 2; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; }
-.zona-inf-izq { grid-column: 1; grid-row: 5; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+.zona-der { 
+    grid-column: 3; 
+    grid-row: 1 / 8; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 5px;
+}
+.zona-izq { 
+    grid-column: 1; 
+    grid-row: 2; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start;
+    gap: 5px;
+}
+.zona-inf-izq { 
+    grid-column: 1; 
+    grid-row: 5; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-start;
+    gap: 5px;
+}
 .zona-inf-der { 
     grid-column: 2; 
     grid-row: 6; 
@@ -350,6 +377,7 @@ nav {
     align-items: center;
     justify-content: center;
     padding: 12px 8px 8px 8px;
+    padding-right: 120px;
     gap: 5px;
     border-top: 2px dashed rgba(255,255,255,0.1);
     position: relative;
@@ -525,17 +553,31 @@ nav {
     z-index: 1;
 }
 
-/* ===== ZONA DERECHA — Espacios horizontales (moto hacia pared derecha) ===== */
+/* ===== ESPACIOS HORIZONTALES (Pared Izquierda y Pared Derecha) ===== */
+.zona-sup-izq .espacio,
+.zona-izq .espacio,
+.zona-inf-izq .espacio,
 .zona-der .espacio {
     width: 72px;
-    height: 40px;
+    height: 38px;
     flex-direction: row;
     gap: 4px;
     padding: 0 4px;
 }
 
-.zona-der .espacio .slot-num { font-size: 10px; }
-.zona-der .espacio .moto-icon { font-size: 15px; }
+.zona-sup-izq .espacio .slot-num,
+.zona-izq .espacio .slot-num,
+.zona-inf-izq .espacio .slot-num,
+.zona-der .espacio .slot-num { 
+    font-size: 10px; 
+}
+
+.zona-sup-izq .espacio .moto-icon,
+.zona-izq .espacio .moto-icon,
+.zona-inf-izq .espacio .moto-icon,
+.zona-der .espacio .moto-icon { 
+    font-size: 14px; 
+}
 
 /* ===== Animación de asignación de espacio ===== */
 @keyframes spaceAssigned {
@@ -1054,7 +1096,7 @@ footer p { font-size: 13px; }
     .mapa-wrapper { padding: 14px; border-radius: 14px; }
 
     .parqueadero {
-        grid-template-columns: 114px 1fr 74px;
+        grid-template-columns: 78px 1fr 74px;
         padding: 12px;
         gap: 6px;
     }
@@ -1067,12 +1109,24 @@ footer p { font-size: 13px; }
     .espacio .slot-num { font-size: 10px; }
     .espacio .moto-icon { font-size: 14px; }
 
+    .zona-sup-izq .espacio,
+    .zona-izq .espacio,
+    .zona-inf-izq .espacio,
     .zona-der .espacio {
         width: 60px;
         height: 34px;
     }
 
-    .zona-der .espacio .moto-icon { font-size: 13px; }
+    .zona-sup-izq .espacio .moto-icon,
+    .zona-izq .espacio .moto-icon,
+    .zona-inf-izq .espacio .moto-icon,
+    .zona-der .espacio .moto-icon { 
+        font-size: 13px; 
+    }
+
+    .entrada {
+        padding-right: 70px;
+    }
 
     .checkin-form {
         flex-direction: column;
@@ -1098,7 +1152,7 @@ footer p { font-size: 13px; }
 /* ===== RESPONSIVE — Small phones ===== */
 @media (max-width: 390px) {
     .parqueadero {
-        grid-template-columns: 92px 1fr 60px;
+        grid-template-columns: 66px 1fr 60px;
         padding: 8px;
         gap: 4px;
     }
@@ -1111,13 +1165,31 @@ footer p { font-size: 13px; }
     .espacio .slot-num { font-size: 9px; }
     .espacio .moto-icon { font-size: 12px; }
 
+    .zona-sup-izq .espacio,
+    .zona-izq .espacio,
+    .zona-inf-izq .espacio,
     .zona-der .espacio {
         width: 50px;
         height: 28px;
     }
 
-    .zona-der .espacio .slot-num { font-size: 9px; }
-    .zona-der .espacio .moto-icon { font-size: 11px; }
+    .zona-sup-izq .espacio .slot-num,
+    .zona-izq .espacio .slot-num,
+    .zona-inf-izq .espacio .slot-num,
+    .zona-der .espacio .slot-num { 
+        font-size: 9px; 
+    }
+
+    .zona-sup-izq .espacio .moto-icon,
+    .zona-izq .espacio .moto-icon,
+    .zona-inf-izq .espacio .moto-icon,
+    .zona-der .espacio .moto-icon { 
+        font-size: 11px; 
+    }
+
+    .entrada {
+        padding-right: 50px;
+    }
 
     .ascensor-icon { font-size: 20px; }
     .ascensor-label { font-size: 7.5px; }
