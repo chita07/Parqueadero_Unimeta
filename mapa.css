@@ -249,100 +249,70 @@ nav {
 .zona-inf-izq { grid-column: 1; grid-row: 5; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
 .zona-inf-der { grid-column: 2; grid-row: 6; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
 
-/* ===== FLECHAS DE TRÁFICO — Animadas ===== */
+/* ===== FLECHAS DE TRÁFICO — SVG Animadas ===== */
 .flecha {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     position: relative;
-    overflow: hidden;
-    border-radius: 4px;
-    min-height: 28px;
+    gap: 4px;
 }
 
-.flecha-sup        { grid-column: 2; grid-row: 2; }
-.flecha-centro-sube{ grid-column: 2; grid-row: 3 / 5; }
-.flecha-inf        { grid-column: 2; grid-row: 5; }
+.flecha-sup        { grid-column: 2; grid-row: 2; padding: 4px 8px; }
+.flecha-centro-sube{ grid-column: 2; grid-row: 3 / 5; padding: 8px 4px; }
+.flecha-inf        { grid-column: 2; grid-row: 5; padding: 4px 8px; }
 
-/* Animated dashed traffic flow — horizontal arrows */
-.flecha-sup::after,
-.flecha-inf::after {
-    content: '';
-    position: absolute;
-    height: 3px;
-    width: 200%;
-    top: 50%;
-    transform: translateY(-50%);
-    background-image: repeating-linear-gradient(
-        90deg,
-        rgba(255,205,28,0.85) 0px,
-        rgba(255,205,28,0.85) 14px,
-        transparent 14px,
-        transparent 24px
-    );
+/* SVG horizontal arrow fills the width */
+.flecha-svg {
+    width: 100%;
+    height: 28px;
+    display: block;
+    overflow: visible;
 }
 
-.flecha-sup::after  { animation: flowLeft  0.7s linear infinite; }
-.flecha-inf::after  { animation: flowRight 0.7s linear infinite; }
-
-/* Animated dashed traffic flow — vertical arrow */
-.flecha-centro-sube::after {
-    content: '';
-    position: absolute;
-    width: 3px;
-    height: 200%;
-    left: 50%;
-    top: 0;
-    transform: translateX(-50%);
-    background-image: repeating-linear-gradient(
-        180deg,
-        rgba(255,205,28,0.85) 0px,
-        rgba(255,205,28,0.85) 14px,
-        transparent 14px,
-        transparent 24px
-    );
-    animation: flowUp 0.7s linear infinite;
+/* SVG vertical arrow fills the height */
+.flecha-svg-v {
+    width: 28px;
+    height: 100%;
+    min-height: 60px;
+    display: block;
+    overflow: visible;
 }
 
-/* Arrow head indicators (small triangles) */
-.flecha-sup::before {
-    content: '◀';
-    font-size: 10px;
-    color: rgba(255,205,28,0.6);
-    position: absolute;
-    left: 4px;
-    z-index: 1;
+/* Animated road stripe — horizontal */
+.road-stripe {
+    stroke-dasharray: 10 6;
+    stroke-dashoffset: 0;
+    animation: flowStripeH 0.9s linear infinite;
 }
 
-.flecha-inf::before {
-    content: '▶';
-    font-size: 10px;
-    color: rgba(255,205,28,0.6);
-    position: absolute;
-    right: 4px;
-    z-index: 1;
+/* Animated road stripe — vertical */
+.road-stripe-v {
+    stroke-dasharray: 10 6;
+    stroke-dashoffset: 0;
+    animation: flowStripeV 0.9s linear infinite;
 }
 
-.flecha-centro-sube::before {
-    content: '▲';
-    font-size: 10px;
-    color: rgba(255,205,28,0.6);
-    position: absolute;
-    top: 4px;
-    z-index: 1;
+@keyframes flowStripeH {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: -32; }
 }
 
-@keyframes flowRight {
-    from { transform: translateY(-50%) translateX(0); }
-    to   { transform: translateY(-50%) translateX(-50%); }
+@keyframes flowStripeV {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: -32; }
 }
-@keyframes flowLeft {
-    from { transform: translateY(-50%) translateX(-50%); }
-    to   { transform: translateY(-50%) translateX(0); }
-}
-@keyframes flowUp {
-    from { transform: translateX(-50%) translateY(0); }
-    to   { transform: translateX(-50%) translateY(-50%); }
+
+/* ENTRADA / SALIDA label under the arrow */
+.flecha-label {
+    font-size: 7.5px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(255, 205, 28, 0.55);
+    white-space: nowrap;
+    font-family: 'Inter', sans-serif;
 }
 
 /* ===== ASCENSOR — Metálico 3D ===== */
