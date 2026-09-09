@@ -4,7 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Mapa interactivo del parqueadero UNIMETA — visualiza disponibilidad de espacios en tiempo real.">
     <title>Mapa del Parqueadero - Unimeta</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="mapa.css">
 </head>
 
@@ -90,48 +94,48 @@
         <!-- Mapa Visual del Parqueadero -->
         <div class="mapa-wrapper">
             <div class="parqueadero" id="parqueadero-mapa">
-                <!-- Zona Superior Izquierda (espacios 1-4, rayas hacia abajo desde el borde superior) -->
-                <div class="zona zona-sup-izq" data-zona="superior-izquierda">
-                    <div class="espacio" data-numero="1"><span>1</span></div>
-                    <div class="espacio" data-numero="2"><span>2</span></div>
-                    <div class="espacio" data-numero="3"><span>3</span></div>
-                    <div class="espacio" data-numero="4"><span>4</span></div>
+                <!-- Zona Superior Izquierda (espacios 1-4) -->
+                <div class="zona zona-sup-izq" data-zona="superior-izquierda" data-zona-label="Zona A">
+                    <div class="espacio" data-numero="1"><span class="slot-num">1</span></div>
+                    <div class="espacio" data-numero="2"><span class="slot-num">2</span></div>
+                    <div class="espacio" data-numero="3"><span class="slot-num">3</span></div>
+                    <div class="espacio" data-numero="4"><span class="slot-num">4</span></div>
                 </div>
 
-                <!-- Zona Superior Derecha (espacios 5-9, rayas hacia abajo desde el borde superior) -->
-                <div class="zona zona-sup-der" data-zona="superior-derecha">
-                    <div class="espacio" data-numero="5"><span>5</span></div>
-                    <div class="espacio" data-numero="6"><span>6</span></div>
-                    <div class="espacio" data-numero="7"><span>7</span></div>
-                    <div class="espacio" data-numero="8"><span>8</span></div>
-                    <div class="espacio" data-numero="9"><span>9</span></div>
+                <!-- Zona Superior Derecha (espacios 5-9) -->
+                <div class="zona zona-sup-der" data-zona="superior-derecha" data-zona-label="Zona B">
+                    <div class="espacio" data-numero="5"><span class="slot-num">5</span></div>
+                    <div class="espacio" data-numero="6"><span class="slot-num">6</span></div>
+                    <div class="espacio" data-numero="7"><span class="slot-num">7</span></div>
+                    <div class="espacio" data-numero="8"><span class="slot-num">8</span></div>
+                    <div class="espacio" data-numero="9"><span class="slot-num">9</span></div>
                 </div>
 
                 <!-- Flecha de flujo: arriba gira a la izquierda -->
                 <div class="flecha flecha-sup">←</div>
 
                 <!-- Zona Izquierda (espacios 23-25, arriba del ascensor) -->
-                <div class="zona zona-izq" data-zona="izquierda">
-                    <div class="espacio" data-numero="23"><span>23</span></div>
-                    <div class="espacio" data-numero="24"><span>24</span></div>
-                    <div class="espacio" data-numero="25"><span>25</span></div>
+                <div class="zona zona-izq" data-zona="izquierda" data-zona-label="Zona D">
+                    <div class="espacio" data-numero="23"><span class="slot-num">23</span></div>
+                    <div class="espacio" data-numero="24"><span class="slot-num">24</span></div>
+                    <div class="espacio" data-numero="25"><span class="slot-num">25</span></div>
                 </div>
 
                 <!-- Zona Derecha (espacios 10-22, toda la pared derecha) -->
-                <div class="zona zona-der" data-zona="derecha">
-                    <div class="espacio" data-numero="10"><span>10</span></div>
-                    <div class="espacio" data-numero="11"><span>11</span></div>
-                    <div class="espacio" data-numero="12"><span>12</span></div>
-                    <div class="espacio" data-numero="13"><span>13</span></div>
-                    <div class="espacio" data-numero="14"><span>14</span></div>
-                    <div class="espacio" data-numero="15"><span>15</span></div>
-                    <div class="espacio" data-numero="16"><span>16</span></div>
-                    <div class="espacio" data-numero="17"><span>17</span></div>
-                    <div class="espacio" data-numero="18"><span>18</span></div>
-                    <div class="espacio" data-numero="19"><span>19</span></div>
-                    <div class="espacio" data-numero="20"><span>20</span></div>
-                    <div class="espacio" data-numero="21"><span>21</span></div>
-                    <div class="espacio" data-numero="22"><span>22</span></div>
+                <div class="zona zona-der" data-zona="derecha" data-zona-label="Zona C">
+                    <div class="espacio" data-numero="10"><span class="slot-num">10</span></div>
+                    <div class="espacio" data-numero="11"><span class="slot-num">11</span></div>
+                    <div class="espacio" data-numero="12"><span class="slot-num">12</span></div>
+                    <div class="espacio" data-numero="13"><span class="slot-num">13</span></div>
+                    <div class="espacio" data-numero="14"><span class="slot-num">14</span></div>
+                    <div class="espacio" data-numero="15"><span class="slot-num">15</span></div>
+                    <div class="espacio" data-numero="16"><span class="slot-num">16</span></div>
+                    <div class="espacio" data-numero="17"><span class="slot-num">17</span></div>
+                    <div class="espacio" data-numero="18"><span class="slot-num">18</span></div>
+                    <div class="espacio" data-numero="19"><span class="slot-num">19</span></div>
+                    <div class="espacio" data-numero="20"><span class="slot-num">20</span></div>
+                    <div class="espacio" data-numero="21"><span class="slot-num">21</span></div>
+                    <div class="espacio" data-numero="22"><span class="slot-num">22</span></div>
                 </div>
 
                 <!-- Flecha central (sube) -->
@@ -144,22 +148,22 @@
                 </div>
 
                 <!-- Zona Inferior Izquierda (espacios 26-30, debajo del ascensor) -->
-                <div class="zona zona-inf-izq" data-zona="inferior-izquierda">
-                    <div class="espacio" data-numero="26"><span>26</span></div>
-                    <div class="espacio" data-numero="27"><span>27</span></div>
-                    <div class="espacio" data-numero="28"><span>28</span></div>
-                    <div class="espacio" data-numero="29"><span>29</span></div>
-                    <div class="espacio" data-numero="30"><span>30</span></div>
+                <div class="zona zona-inf-izq" data-zona="inferior-izquierda" data-zona-label="Zona E">
+                    <div class="espacio" data-numero="26"><span class="slot-num">26</span></div>
+                    <div class="espacio" data-numero="27"><span class="slot-num">27</span></div>
+                    <div class="espacio" data-numero="28"><span class="slot-num">28</span></div>
+                    <div class="espacio" data-numero="29"><span class="slot-num">29</span></div>
+                    <div class="espacio" data-numero="30"><span class="slot-num">30</span></div>
                 </div>
 
                 <!-- Flecha inferior (gira a la derecha) -->
                 <div class="flecha flecha-inf">→</div>
 
                 <!-- Zona Inferior Derecha (espacios 31-33) -->
-                <div class="zona zona-inf-der" data-zona="inferior-derecha">
-                    <div class="espacio" data-numero="31"><span>31</span></div>
-                    <div class="espacio" data-numero="32"><span>32</span></div>
-                    <div class="espacio" data-numero="33"><span>33</span></div>
+                <div class="zona zona-inf-der" data-zona="inferior-derecha" data-zona-label="Zona F">
+                    <div class="espacio" data-numero="31"><span class="slot-num">31</span></div>
+                    <div class="espacio" data-numero="32"><span class="slot-num">32</span></div>
+                    <div class="espacio" data-numero="33"><span class="slot-num">33</span></div>
                 </div>
 
                 <!-- Columna / Punto de referencia -->
@@ -256,6 +260,16 @@
             </div>
         </div>
     </main>
+
+    <!-- Custom UI Dialog (uiAlert / uiConfirm) -->
+    <div class="custom-dialog-overlay hidden" id="custom-dialog-overlay">
+        <div class="custom-dialog" id="custom-dialog-card">
+            <span class="custom-dialog-icon" id="custom-dialog-icon">⚠️</span>
+            <h3 class="custom-dialog-title" id="custom-dialog-title">Atención</h3>
+            <p class="custom-dialog-msg" id="custom-dialog-msg">Mensaje</p>
+            <div class="custom-dialog-actions" id="custom-dialog-actions"></div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer>

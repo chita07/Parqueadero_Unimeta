@@ -2006,3 +2006,30 @@ footer p {
 .data-table tbody tr:hover {
     background: #F8FAFC;
 }
+
+/* Table Pagination & Mobile Enhancements */
+.table-pagination button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .data-table {
+        min-width: 620px;
+    }
+    .panel-body {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .header-content {
+        padding: 10px 16px;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .header-nav {
+        justify-content: center;
+        width: 100%;
+        gap: 6px;
+    }
+}

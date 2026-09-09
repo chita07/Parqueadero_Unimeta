@@ -88,6 +88,7 @@ function seleccionarPlan(plan, precio, nombre) {
     document.getElementById('resumen-tipo').textContent = nombre;
     document.getElementById('resumen-servicio').textContent = 'Moto - Tarifa ' + nombre;
     document.getElementById('resumen-total').textContent = '$' + precioSeleccionado.toLocaleString('es-CO');
+    actualizarResumenVigencia();
 
     document.getElementById('step-pago').classList.remove('hidden');
     document.getElementById('step-pago').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -99,6 +100,24 @@ function cambiarHoras() {
         const base = tarifasBase['hora'] || 1500;
         precioSeleccionado = base * horas;
         document.getElementById('resumen-total').textContent = '$' + precioSeleccionado.toLocaleString('es-CO');
+        actualizarResumenVigencia();
+    }
+}
+
+function actualizarResumenVigencia() {
+    const el = document.getElementById('resumen-vigencia');
+    if (!el || !planSeleccionado) return;
+    const ahora = new Date();
+    const fin = calcularFechaFin(ahora, planSeleccionado);
+    if (planSeleccionado === 'hora') {
+        const horas = parseInt(document.getElementById('horas-permanencia').value || '2');
+        el.textContent = `${horas} hora(s) (hasta ${fin.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })})`;
+    } else if (planSeleccionado === 'diario') {
+        el.textContent = `Hasta hoy 11:59 PM`;
+    } else if (planSeleccionado === 'semanal') {
+        el.textContent = `7 días (hasta ${fin.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })})`;
+    } else if (planSeleccionado === 'mensual') {
+        el.textContent = `30 días (hasta ${fin.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })})`;
     }
 }
 
@@ -143,68 +162,69 @@ async function confirmarPago() {
     btnConfirmar.disabled = true;
     btnConfirmar.textContent = 'Verificando cupos...';
 
-    // Verificar que queden cupos en la jornada elegida
-    const totalActivos = await contarSuscripcionesJornada(jornada);
-    if (totalActivos >= TOTAL_ESPACIOS) {
-        await uiAlert('Sin Cupos', `⚠️ No hay cupos disponibles para la jornada ${JORNADAS[jornada].label}.\nPor favor elige otra jornada o intenta más tarde.`, '🚫');
-        btnConfirmar.disabled = false;
-        btnConfirmar.textContent = 'Confirmar Pago';
-        return;
-    }
+    const spinnerOverlay = document.getElementById('pago-spinner-overlay');
+    const spinnerSub = document.getElementById('spinner-subtitulo');
+    const progressFill = document.getElementById('pago-progress-fill');
 
-    btnConfirmar.textContent = 'Procesando...';
+    try {
+        // Verificar que queden cupos en la jornada elegida
+        const totalActivos = await contarSuscripcionesJornada(jornada);
+        if (totalActivos >= TOTAL_ESPACIOS) {
+            await uiAlert('Sin Cupos', `⚠️ No hay cupos disponibles para la jornada ${JORNADAS[jornada].label}.\nPor favor elige otra jornada o intenta más tarde.`, '🚫');
+            return;
+        }
 
-    const metodoNombres = { nequi: 'Nequi', daviplata: 'Daviplata', pse: 'PSE', tarjeta: 'Tarjeta de Crédito/Débito' };
-    const ref        = 'PQ-' + Date.now().toString().slice(-8);
-    const fechaInicio = new Date();
-    const fechaFin   = calcularFechaFin(fechaInicio, planSeleccionado);
-    const horasEstimadas = planSeleccionado === 'hora' ? parseInt(document.getElementById('horas-permanencia').value || '2') : null;
+        btnConfirmar.textContent = 'Procesando...';
 
-    const session = JSON.parse(localStorage.getItem('unimeta_session') || 'null');
+        const metodoNombres = { nequi: 'Nequi', daviplata: 'Daviplata', pse: 'PSE', tarjeta: 'Tarjeta de Crédito/Débito' };
+        const ref        = 'PQ-' + Date.now().toString().slice(-8);
+        const fechaInicio = new Date();
+        const fechaFin   = calcularFechaFin(fechaInicio, planSeleccionado);
+        const horasEstimadas = planSeleccionado === 'hora' ? parseInt(document.getElementById('horas-permanencia').value || '2') : null;
 
-    // Datos base del pago (siempre compatibles con la estructura original)
-    const pagoDataBase = {
-        placa:           placa.toUpperCase(),
-        nombre,
-        cedula,
-        telefono,
-        tipo_servicio:   planSeleccionado,
-        precio:          precioSeleccionado,
-        metodo_pago:     metodo.value,
-        referencia:      ref,
-        fecha_inicio:    fechaInicio.toISOString(),
-        fecha_fin:       fechaFin.toISOString(),
-        estado:          'activo',
-        jornada:         jornada,
-        horas_estimadas: horasEstimadas
-    };
+        // Mostrar animación de procesamiento por etapas visible y fluida
+        if (spinnerOverlay) {
+            spinnerOverlay.classList.remove('hidden');
+            if (progressFill) progressFill.style.width = '0%';
+            if (spinnerSub) spinnerSub.textContent = `Conectando con ${metodoNombres[metodo.value] || 'pasarela'}...`;
+            setTimeout(() => { if (progressFill) progressFill.style.width = '28%'; }, 20);
+            await new Promise(res => setTimeout(res, 500));
 
-    // Intentar primero con columnas de trazabilidad (Obj. 3)
-    // Si falla por columna inexistente, reintentar sin ellas
-    let data, error;
+            if (progressFill) progressFill.style.width = '70%';
+            if (spinnerSub) spinnerSub.textContent = 'Validando transacción y credenciales...';
+            await new Promise(res => setTimeout(res, 500));
+        }
 
-    const pagoDataCompleto = {
-        ...pagoDataBase,
-        usuario_id:          session ? session.id : null,
-        estado_verificacion: 'verificado'
-    };
+        // Datos del pago limpios y directos compatibles con la base de datos
+        const pagoData = {
+            placa:           placa.toUpperCase(),
+            nombre,
+            cedula,
+            telefono:        telefono || null,
+            tipo_servicio:   planSeleccionado,
+            precio:          precioSeleccionado,
+            metodo_pago:     metodo.value,
+            referencia:      ref,
+            fecha_inicio:    fechaInicio.toISOString(),
+            fecha_fin:       fechaFin.toISOString(),
+            estado:          'activo',
+            jornada:         jornada,
+            horas_estimadas: horasEstimadas
+        };
 
-    ({ data, error } = await db.from('pagos').insert([pagoDataCompleto]).select());
+        const { data, error } = await db.from('pagos').insert([pagoData]).select();
 
-    // Fallback: si el error es por columna no encontrada, reintentar con datos base
-    if (error && (error.message.includes('estado_verificacion') || error.message.includes('usuario_id') || error.message.includes('schema cache'))) {
-        console.warn('Columnas de trazabilidad no disponibles aún. Insertando sin ellas...');
-        ({ data, error } = await db.from('pagos').insert([pagoDataBase]).select());
-    }
+        if (error) {
+            console.error('Supabase error:', error);
+            await uiAlert('Error del Sistema', 'Error al registrar el pago: ' + error.message, '❌');
+            return;
+        }
 
-    btnConfirmar.disabled = false;
-    btnConfirmar.textContent = 'Confirmar Pago';
-
-    if (error) {
-        await uiAlert('Error del Sistema', 'Error al registrar el pago: ' + error.message, '❌');
-        console.error('Supabase error:', error);
-        return;
-    }
+        if (spinnerOverlay) {
+            if (progressFill) progressFill.style.width = '100%';
+            if (spinnerSub) spinnerSub.textContent = '¡Pago aprobado con éxito!';
+            await new Promise(res => setTimeout(res, 450));
+        }
 
     // Mostrar confirmación
     const textoPlanDisplay = planSeleccionado === 'hora' ? `${nombrePlan} (${horasEstimadas}h)` : nombrePlan;
@@ -217,19 +237,179 @@ async function confirmarPago() {
     document.getElementById('conf-jornada').textContent = JORNADAS[jornada].label;
 
     window._pagoRef = ref;
+    window._datosComprobante = {
+        ref,
+        placa: placa.toUpperCase(),
+        nombre,
+        cedula,
+        servicio: textoPlanDisplay,
+        total: precioSeleccionado,
+        metodo: metodoNombres[metodo.value] || metodo.value,
+        jornada: JORNADAS[jornada].label,
+        fecha: new Date().toLocaleString('es-CO'),
+        vigencia: document.getElementById('resumen-vigencia') ? document.getElementById('resumen-vigencia').textContent : 'Válido'
+    };
 
-  // Notificar a otras pestañas/ventanas (panel admin) del nuevo pago
-  try {
-    localStorage.setItem('unimeta_nuevo_pago', JSON.stringify({ ref, placa: placa.toUpperCase(), ts: Date.now() }));
-    if (window.BroadcastChannel) {
-      new BroadcastChannel('unimeta_channel').postMessage({ tipo: 'nuevo_pago', ref });
-    }
-  } catch(e) {}
+    // Notificar a otras pestañas/ventanas (panel admin) del nuevo pago
+    try {
+        localStorage.setItem('unimeta_nuevo_pago', JSON.stringify({ ref, placa: placa.toUpperCase(), ts: Date.now() }));
+        if (window.BroadcastChannel) {
+            new BroadcastChannel('unimeta_channel').postMessage({ tipo: 'nuevo_pago', ref });
+        }
+    } catch(e) {}
 
     document.getElementById('step-servicio').classList.add('hidden');
     document.getElementById('step-pago').classList.add('hidden');
     document.getElementById('step-confirmacion').classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+        console.error('Error al procesar el pago:', err);
+        await uiAlert('Error', 'No se pudo completar el proceso de pago: ' + (err.message || err), '❌');
+    } finally {
+        if (spinnerOverlay) spinnerOverlay.classList.add('hidden');
+        btnConfirmar.disabled = false;
+        btnConfirmar.textContent = 'Confirmar Pago';
+    }
+}
+
+// ===== Generación y Descarga de Comprobante Digital (Canvas PNG) =====
+function descargarComprobante() {
+    const c = window._datosComprobante;
+    if (!c) {
+        alert('No hay datos de comprobante para descargar.');
+        return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 750;
+    canvas.height = 920;
+    const ctx = canvas.getContext('2d');
+
+    // Fondo
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Borde exterior sutil
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(15, 15, canvas.width - 30, canvas.height - 30);
+
+    // Encabezado Unimeta Rojo
+    const grad = ctx.createLinearGradient(0, 0, canvas.width, 160);
+    grad.addColorStop(0, '#E30614');
+    grad.addColorStop(1, '#b80510');
+    ctx.fillStyle = grad;
+    ctx.fillRect(15, 15, canvas.width - 30, 140);
+
+    // Texto Encabezado
+    ctx.fillStyle = '#FFCD1C';
+    ctx.font = 'bold 26px Segoe UI, Arial, sans-serif';
+    ctx.fillText('CORPORACIÓN UNIVERSITARIA DEL META', 40, 65);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 20px Segoe UI, Arial, sans-serif';
+    ctx.fillText('SISTEMA DE PARQUEADERO OFICIAL — COMPROBANTE DE PAGO', 40, 105);
+
+    ctx.font = '14px Segoe UI, Arial, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.fillText('Documento digital no tributario con valor probatorio de acceso', 40, 130);
+
+    // Badge de Aprobado
+    ctx.fillStyle = '#dcfce7';
+    ctx.beginPath();
+    ctx.roundRect(40, 185, 230, 42, 8);
+    ctx.fill();
+    ctx.fillStyle = '#15803d';
+    ctx.font = 'bold 16px Segoe UI, Arial, sans-serif';
+    ctx.fillText('✅ PAGO CONFIRMADO', 58, 212);
+
+    // Referencia a la derecha
+    ctx.fillStyle = '#64748b';
+    ctx.font = '14px Segoe UI, Arial, sans-serif';
+    ctx.fillText('REFERENCIA OFICIAL:', 480, 198);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText(c.ref, 480, 222);
+
+    // Línea divisoria
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(40, 250);
+    ctx.lineTo(canvas.width - 40, 250);
+    ctx.stroke();
+
+    // Tabla de Detalles
+    const detalles = [
+        ['Placa del Vehículo:', c.placa],
+        ['Nombre del Titular:', c.nombre],
+        ['Cédula de Ciudadanía:', c.cedula || 'No especificada'],
+        ['Tipo de Servicio:', c.servicio],
+        ['Jornada Autorizada:', c.jornada],
+        ['Método de Pago:', c.metodo],
+        ['Fecha y Hora de Emisión:', c.fecha],
+        ['Vigencia del Servicio:', c.vigencia]
+    ];
+
+    let y = 295;
+    detalles.forEach(([lbl, val], idx) => {
+        // Fondo alterno
+        if (idx % 2 === 0) {
+            ctx.fillStyle = '#f8fafc';
+            ctx.fillRect(40, y - 24, canvas.width - 80, 36);
+        }
+        ctx.fillStyle = '#64748b';
+        ctx.font = '15px Segoe UI, Arial, sans-serif';
+        ctx.fillText(lbl, 55, y);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 16px Segoe UI, Arial, sans-serif';
+        ctx.fillText(val, 290, y);
+        y += 42;
+    });
+
+    // Cuadro Total Destacado
+    ctx.fillStyle = '#fffbeb';
+    ctx.strokeStyle = '#fde68a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(40, y + 10, canvas.width - 80, 70, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#92400e';
+    ctx.font = 'bold 18px Segoe UI, Arial, sans-serif';
+    ctx.fillText('TOTAL CANCELADO:', 60, y + 52);
+
+    ctx.fillStyle = '#E30614';
+    ctx.font = 'bold 30px Segoe UI, Arial, sans-serif';
+    ctx.fillText('$' + Number(c.total).toLocaleString('es-CO') + ' COP', 380, y + 55);
+
+    // Simulación de Código de Barras / Seguridad
+    y += 110;
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(40, y, canvas.width - 80, 60);
+
+    // Barras
+    ctx.fillStyle = '#0f172a';
+    for (let x = 60; x < canvas.width - 60; x += 6) {
+        const barW = ((x * 13) % 4) + 1;
+        ctx.fillRect(x, y + 10, barW, 40);
+    }
+
+    // Pie de comprobante
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px Segoe UI, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Código de Control ANPR: ${c.ref} • Sede Principal UNIMETA • Villavicencio, Meta`, canvas.width / 2, y + 85);
+    ctx.fillText('Presenta este comprobante digital o escanea tu placa en la entrada.', canvas.width / 2, y + 105);
+    ctx.textAlign = 'left';
+
+    // Descarga directa
+    const link = document.createElement('a');
+    link.download = `Comprobante_UNIMETA_${c.ref}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
 }
 
 function cambiarPlan() {

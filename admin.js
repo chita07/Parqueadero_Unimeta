@@ -122,21 +122,52 @@ function actualizarEstadisticas(registros) {
     document.getElementById('chart-semanal-pct').textContent = total ? (semanales / total * 100).toFixed(1) + '%' : '0%';
     document.getElementById('chart-mensual-pct').textContent = total ? (mensuales / total * 100).toFixed(1) + '%' : '0%';
 
-    // Actualizar gráfico visual (conic-gradient proporcional)
-    const pieChart = document.querySelector('.pie-chart');
-    if (total > 0) {
-        const pctDiario = (diarios / total) * 100;
-        const pctSemanal = (semanales / total) * 100;
-        const p1 = pctDiario;
-        const p2 = pctDiario + pctSemanal;
-        pieChart.style.background = `conic-gradient(
-            #E30614 0% ${p1}%,
-            #FFCD1C ${p1}% ${p2}%,
-            #333333 ${p2}% 100%
-        )`;
-    } else {
-        pieChart.style.background = '#e0e0e0';
+    // Actualizar gráfico Chart.js
+    actualizarGraficoChartJs(diarios, semanales, mensuales);
+}
+
+let chartInstancia = null;
+function actualizarGraficoChartJs(diarios, semanales, mensuales) {
+    const canvas = document.getElementById('distribucionChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const ctx = canvas.getContext('2d');
+    const total = diarios + semanales + mensuales;
+
+    if (chartInstancia) {
+        chartInstancia.destroy();
     }
+
+    chartInstancia = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Diario', 'Semanal', 'Mensual'],
+            datasets: [{
+                data: total === 0 ? [1, 1, 1] : [diarios, semanales, mensuales],
+                backgroundColor: total === 0 ? ['#e2e8f0', '#cbd5e1', '#94a3b8'] : ['#E30614', '#FFCD1C', '#1e293b'],
+                borderWidth: 2,
+                borderColor: '#ffffff',
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '72%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if (total === 0) return ' Sin datos registrados';
+                            const val = context.raw || 0;
+                            const pct = ((val / total) * 100).toFixed(1);
+                            return ` ${context.label}: ${val} usuarios (${pct}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
 }
 
 // Buscar en la tabla de servicios
@@ -313,6 +344,15 @@ document.getElementById('btn-registrar-manual').addEventListener('click', async 
 
 // Cargar al iniciar
 document.addEventListener('DOMContentLoaded', () => {
+    // Fecha dinámica en el subtítulo
+    const dateSubtitle = document.getElementById('admin-date-subtitle');
+    if (dateSubtitle) {
+        const ahora = new Date();
+        const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const fechaStr = ahora.toLocaleDateString('es-CO', opciones);
+        dateSubtitle.textContent = `Resumen general del parqueadero — ${fechaStr.charAt(0).toUpperCase() + fechaStr.slice(1)}`;
+    }
+
     cargarRegistros();
     cargarMapaAdmin();
     cargarTarifasAdmin();
@@ -453,21 +493,32 @@ async function cancelarCesion(id) {
 }
 
 // ===== OBJETIVO 4: CONTROL DE ACCESO Y ALERTAS ANPR =====
+let paginaActualANPR = 1;
+const LIMITE_ANPR = 10;
+let totalAlertasANPR = 0;
 
 async function cargarAlertasANPR() {
     const tbody = document.getElementById('tabla-alertas-anpr');
     if (!tbody) return;
 
+    // Contar total
+    const { count } = await db.from('alertas_acceso').select('*', { count: 'exact', head: true });
+    totalAlertasANPR = count || 0;
+
+    const desde = (paginaActualANPR - 1) * LIMITE_ANPR;
+    const hasta = desde + LIMITE_ANPR - 1;
+
     const { data, error } = await db
         .from('alertas_acceso')
         .select('*')
         .order('fecha_hora', { ascending: false })
-        .limit(20);
+        .range(desde, hasta);
 
     if (error || !data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:#888;">No hay registros de escaneos ANPR.</td></tr>';
         document.getElementById('stat-alertas-sin-pago').textContent = '0';
         document.getElementById('stat-alertas-con-pago').textContent = '0';
+        actualizarPaginacionANPR(0);
         return;
     }
 
@@ -509,6 +560,29 @@ async function cargarAlertasANPR() {
             </tr>
         `;
     }).join('');
+
+    actualizarPaginacionANPR(data.length);
+}
+
+function actualizarPaginacionANPR(itemsActuales) {
+    const info = document.getElementById('anpr-paginacion-info');
+    const btnPrev = document.getElementById('btn-anpr-prev');
+    const btnNext = document.getElementById('btn-anpr-next');
+    if (!info) return;
+
+    const totalPaginas = Math.ceil(totalAlertasANPR / LIMITE_ANPR) || 1;
+    info.textContent = `Página ${paginaActualANPR} de ${totalPaginas} (${totalAlertasANPR} escaneos totales)`;
+    if (btnPrev) btnPrev.disabled = paginaActualANPR <= 1;
+    if (btnNext) btnNext.disabled = paginaActualANPR >= totalPaginas;
+}
+
+function cambiarPaginaANPR(delta) {
+    const totalPaginas = Math.ceil(totalAlertasANPR / LIMITE_ANPR) || 1;
+    const nueva = paginaActualANPR + delta;
+    if (nueva >= 1 && nueva <= totalPaginas) {
+        paginaActualANPR = nueva;
+        cargarAlertasANPR();
+    }
 }
 
 async function marcarAlertaAtendida(id, atendida) {
@@ -907,18 +981,38 @@ async function guardarTarifasAdmin() {
 }
 
 // ===== GESTIÓN DE USUARIOS (Admin) =====
+let todosLosUsuariosAdmin = [];
+let usuarioIdEditando = null;
+
 async function cargarUsuariosAdmin() {
     const tbody = document.getElementById('tabla-usuarios');
     if (!tbody) return;
 
     const { data: usuarios, error } = await db.from('usuarios').select('*').order('created_at', { ascending: false });
     if (error || !usuarios || usuarios.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:15px;color:#888;">No hay usuarios registrados.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:15px;color:#888;">No hay usuarios registrados.</td></tr>';
+        const badge = document.getElementById('usuarios-count-badge');
+        if (badge) badge.textContent = '0 usuarios';
         return;
     }
 
-    tbody.innerHTML = usuarios.map((u, i) => {
-        const initials = u.nombre.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    todosLosUsuariosAdmin = usuarios;
+    renderizarTablaUsuarios(usuarios);
+}
+
+function renderizarTablaUsuarios(lista) {
+    const tbody = document.getElementById('tabla-usuarios');
+    const badge = document.getElementById('usuarios-count-badge');
+    if (badge) badge.textContent = `${lista.length} de ${todosLosUsuariosAdmin.length} usuarios`;
+    if (!tbody) return;
+
+    if (lista.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#888;">No se encontraron usuarios coincidentes.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = lista.map((u, i) => {
+        const initials = (u.nombre || 'U').split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
         return `
         <tr>
             <td>${i + 1}</td>
@@ -933,13 +1027,88 @@ async function cargarUsuariosAdmin() {
             <td>${u.telefono || '<em style="color:#94A3B8;">—</em>'}</td>
             <td><span class="${u.rol === 'admin' ? 'role-badge-admin' : 'role-badge-user'}">${u.rol === 'admin' ? '🛡️ ADMIN' : '🚗 CONDUCTOR'}</span></td>
             <td>${u.activo !== false ? '<span class="status-dot-active">Activo</span>' : '<span style="color:#EF4444;font-weight:700;">Inactivo</span>'}</td>
+            <td style="text-align:center; white-space:nowrap;">
+                <button class="btn-unimeta btn-unimeta-secondary" onclick="iniciarEdicionUsuario(${u.id})" style="padding:4px 8px;font-size:12px;margin-right:4px;">✏️ Editar</button>
+                <button class="btn-unimeta" onclick="eliminarUsuarioAdmin(${u.id}, '${u.nombre.replace(/'/g, "\\'")}')" style="background:#fee2e2;color:#b91c1c;border:1px solid #fecaca;padding:4px 8px;font-size:12px;cursor:pointer;border-radius:6px;">🗑️</button>
+            </td>
         </tr>
     `}).join('');
 }
 
-function toggleFormNuevoUsuario() {
+function filtrarUsuariosAdmin(query) {
+    const q = (query || '').toLowerCase().trim();
+    if (!q) {
+        renderizarTablaUsuarios(todosLosUsuariosAdmin);
+        return;
+    }
+    const filtrados = todosLosUsuariosAdmin.filter(u =>
+        (u.nombre && u.nombre.toLowerCase().includes(q)) ||
+        (u.cedula && u.cedula.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.telefono && u.telefono.toLowerCase().includes(q))
+    );
+    renderizarTablaUsuarios(filtrados);
+}
+
+function toggleFormNuevoUsuario(forzarAbrir = false) {
     const box = document.getElementById('form-nuevo-usuario-box');
-    box.classList.toggle('hidden');
+    if (!box) return;
+    if (forzarAbrir) {
+        box.classList.remove('hidden');
+    } else {
+        box.classList.toggle('hidden');
+        if (box.classList.contains('hidden')) {
+            usuarioIdEditando = null;
+            limpiarFormUsuario();
+        }
+    }
+}
+
+function limpiarFormUsuario() {
+    usuarioIdEditando = null;
+    document.getElementById('usr-nombre').value = '';
+    document.getElementById('usr-cedula').value = '';
+    document.getElementById('usr-email').value = '';
+    document.getElementById('usr-telefono').value = '';
+    document.getElementById('usr-password').value = '';
+    document.getElementById('usr-password').placeholder = '••••••••';
+    const btn = document.querySelector('#form-nuevo-usuario-box .btn-unimeta-primary');
+    if (btn) btn.textContent = '💾 Guardar Usuario';
+}
+
+function iniciarEdicionUsuario(id) {
+    const u = todosLosUsuariosAdmin.find(item => item.id === id);
+    if (!u) return;
+
+    usuarioIdEditando = id;
+    toggleFormNuevoUsuario(true);
+
+    document.getElementById('usr-nombre').value = u.nombre || '';
+    document.getElementById('usr-cedula').value = u.cedula || '';
+    document.getElementById('usr-email').value = u.email || '';
+    document.getElementById('usr-telefono').value = u.telefono || '';
+    document.getElementById('usr-rol').value = u.rol || 'usuario';
+    document.getElementById('usr-password').value = '';
+    document.getElementById('usr-password').placeholder = '(Dejar en blanco para no cambiar)';
+
+    const btn = document.querySelector('#form-nuevo-usuario-box .btn-unimeta-primary');
+    if (btn) btn.textContent = '💾 Actualizar Usuario';
+
+    document.getElementById('form-nuevo-usuario-box').scrollIntoView({ behavior: 'smooth' });
+}
+
+async function eliminarUsuarioAdmin(id, nombre) {
+    const confirmar = await uiConfirm('Eliminar Usuario', `¿Estás seguro de que deseas eliminar permanentemente a "${nombre}" del sistema?`, '🗑️');
+    if (!confirmar) return;
+
+    const { error } = await db.from('usuarios').delete().eq('id', id);
+    if (error) {
+        await uiAlert('Error', 'No se pudo eliminar el usuario: ' + error.message, '❌');
+        return;
+    }
+
+    await uiAlert('Eliminado', `El usuario ${nombre} ha sido eliminado.`, '✅');
+    cargarUsuariosAdmin();
 }
 
 async function guardarUsuarioAdmin() {
@@ -950,26 +1119,40 @@ async function guardarUsuarioAdmin() {
     const password = document.getElementById('usr-password').value.trim();
     const rol = document.getElementById('usr-rol').value;
 
-    if (!nombre || !cedula || !password) {
-        await uiAlert('Atención', 'Por favor ingresa al menos nombre, cédula y contraseña.', '⚠️');
+    if (!nombre || !cedula) {
+        await uiAlert('Atención', 'Por favor ingresa al menos nombre y cédula.', '⚠️');
         return;
     }
 
-    const { error } = await db.from('usuarios').insert([{
-        nombre, cedula, email, telefono, password, rol, activo: true
-    }]);
+    if (usuarioIdEditando) {
+        // Actualizar usuario existente
+        const payload = { nombre, cedula, email, telefono, rol };
+        if (password) payload.password = password;
 
-    if (error) {
-        await uiAlert('Error', 'Error al guardar usuario: ' + error.message, '❌');
-        return;
+        const { error } = await db.from('usuarios').update(payload).eq('id', usuarioIdEditando);
+        if (error) {
+            await uiAlert('Error', 'Error al actualizar usuario: ' + error.message, '❌');
+            return;
+        }
+        await uiAlert('Éxito', 'Usuario actualizado correctamente.', '✅');
+    } else {
+        // Crear nuevo usuario
+        if (!password) {
+            await uiAlert('Atención', 'Por favor asigna una contraseña inicial.', '⚠️');
+            return;
+        }
+        const { error } = await db.from('usuarios').insert([{
+            nombre, cedula, email, telefono, password, rol, activo: true
+        }]);
+
+        if (error) {
+            await uiAlert('Error', 'Error al guardar usuario: ' + error.message, '❌');
+            return;
+        }
+        await uiAlert('Éxito', 'Usuario creado correctamente.', '✅');
     }
 
-    await uiAlert('Éxito', 'Usuario creado correctamente.', '✅');
-    document.getElementById('usr-nombre').value = '';
-    document.getElementById('usr-cedula').value = '';
-    document.getElementById('usr-email').value = '';
-    document.getElementById('usr-telefono').value = '';
-    document.getElementById('usr-password').value = '';
+    limpiarFormUsuario();
     toggleFormNuevoUsuario();
     cargarUsuariosAdmin();
 }

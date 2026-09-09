@@ -27,6 +27,33 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (placa) {
         document.getElementById('checkin-placa').value = placa.toUpperCase();
     }
+
+    // Restaurar temporizador desde sessionStorage (sobrevive recarga)
+    const savedTimer = sessionStorage.getItem('unimeta_timer_fin');
+    const savedCheckinId = sessionStorage.getItem('unimeta_checkin_id');
+    if (savedTimer && savedCheckinId) {
+        const fechaFin = new Date(savedTimer);
+        if (fechaFin > new Date()) {
+            iniciarTemporizador(fechaFin);
+            // Intentar restaurar el panel
+            const { data: ci } = await db.from('checkins').select('*').eq('id', savedCheckinId).single();
+            if (ci) {
+                miCheckin = ci;
+                const { data: pago } = await db.from('pagos').select('*').eq('id', ci.pago_id).single();
+                if (pago) mostrarPanelCheckin(ci, pago);
+                await cargarDatos();
+            }
+        } else {
+            sessionStorage.removeItem('unimeta_timer_fin');
+            sessionStorage.removeItem('unimeta_checkin_id');
+        }
+    }
+
+    // Auto-refresh del estado del mapa cada 30 segundos
+    setInterval(async () => {
+        await limpiarCheckinsPasados();
+        await cargarDatos();
+    }, 30000);
 });
 
 // ===== Detectar jornada activa =====
@@ -129,22 +156,27 @@ function renderizarEspacios() {
         const cesion   = cesionesMapa[numero];
         const reserva  = reservasMapa[numero];
 
-        el.classList.remove('libre', 'ocupado', 'mi-espacio', 'cedida', 'reservada');
+        el.classList.remove('libre', 'ocupado', 'mi-espacio', 'cedida', 'reservada', 'just-assigned');
 
         let esMio = false;
         if (checkin && miCheckin && checkin.id === miCheckin.id) esMio = true;
 
         if (esMio) {
             el.classList.add('mi-espacio');
+            el.innerHTML = `<span class="moto-icon">🏍️</span><span class="slot-num">${numero}</span>`;
             setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
         } else if (checkin) {
             el.classList.add('ocupado');
+            el.innerHTML = `<span class="moto-icon">🏍️</span><span class="slot-num">${numero}</span>`;
         } else if (cesion) {
             el.classList.add('cedida');
+            el.innerHTML = `<span class="slot-num">${numero}</span>`;
         } else if (reserva) {
             el.classList.add('reservada');
+            el.innerHTML = `<span class="slot-num">${numero}</span>`;
         } else {
             el.classList.add('libre');
+            el.innerHTML = `<span class="slot-num">${numero}</span>`;
         }
 
         const nuevo = el.cloneNode(true);
@@ -268,6 +300,20 @@ async function realizarCheckin() {
 
     miCheckin = nuevoCheckin;
     await cargarDatos();
+
+    // Guardar en sessionStorage para persistir el temporizador tras recarga
+    sessionStorage.setItem('unimeta_timer_fin', autoLiberarA.toISOString());
+    sessionStorage.setItem('unimeta_checkin_id', nuevoCheckin.id);
+
+    // Animación en el espacio asignado
+    setTimeout(() => {
+        const espacioEl = document.querySelector(`.espacio[data-numero="${espacioLibre}"]`);
+        if (espacioEl) espacioEl.classList.add('just-assigned');
+    }, 100);
+
+    // Sonido suave de confirmación
+    tocarSonidoExito();
+
     mostrarResultado(`🎉 ¡Bienvenido! Tu espacio asignado es el <strong>#${espacioLibre}</strong>. Se libera automáticamente a las ${formatHoraSimple(autoLiberarA.toISOString())}.`, 'success');
     mostrarPanelCheckin(nuevoCheckin, pago);
 
@@ -307,20 +353,22 @@ let tempInterval = null;
 function iniciarTemporizador(fechaFin) {
     if (tempInterval) clearInterval(tempInterval);
     const el = document.getElementById('temp-valor');
-    const textoEl = el.previousElementSibling;
+    const textoEl = el ? el.previousElementSibling : null;
     if (textoEl) textoEl.textContent = 'Espacio libre en: ';
     function tick() {
         const diff = fechaFin - new Date();
         if (diff <= 0) {
-            el.textContent = 'Espacio liberado';
-            el.style.color = '#E30614';
+            if (el) { el.textContent = 'Espacio liberado'; el.style.color = '#E30614'; }
             clearInterval(tempInterval);
+            // Limpiar sessionStorage al expirar
+            sessionStorage.removeItem('unimeta_timer_fin');
+            sessionStorage.removeItem('unimeta_checkin_id');
             return;
         }
         const h = Math.floor(diff / 3600000);
         const m = Math.floor((diff % 3600000) / 60000);
         const s = Math.floor((diff % 60000) / 1000);
-        el.textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+        if (el) el.textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
     }
     tick();
     tempInterval = setInterval(tick, 1000);
@@ -403,11 +451,15 @@ function cerrarTooltip() {
 // ===== Registrar salida del usuario =====
 async function registrarSalidaMiEspacio() {
     if (!miCheckin) {
-        alert('No tienes un espacio asignado activo.');
+        await uiAlert('Sin espacio activo', 'No tienes un espacio asignado activo.', 'ℹ️');
         return;
     }
 
-    const confirmacion = confirm(`¿Confirmas la salida de tu vehículo (${miCheckin.placa}) del espacio #${miCheckin.espacio_numero}?`);
+    const confirmacion = await uiConfirm(
+        'Confirmar Salida',
+        `¿Confirmas la salida de tu vehículo (${miCheckin.placa}) del espacio #${miCheckin.espacio_numero}? El espacio quedará disponible para otros.`,
+        '🚫'
+    );
     if (!confirmacion) return;
 
     const ahoraIso = new Date().toISOString();
@@ -417,14 +469,79 @@ async function registrarSalidaMiEspacio() {
         .eq('id', miCheckin.id);
 
     if (error) {
-        alert('Error al registrar salida: ' + error.message);
+        await uiAlert('Error', 'Error al registrar salida: ' + error.message, '❌');
         return;
     }
 
-    alert(`✅ Salida registrada exitosamente. Espacio #${miCheckin.espacio_numero} liberado.`);
+    await uiAlert('Salida Registrada', `¡Hasta pronto! El espacio #${miCheckin.espacio_numero} ha sido liberado exitosamente.`, '✅');
+
+    // Limpiar sessionStorage
+    sessionStorage.removeItem('unimeta_timer_fin');
+    sessionStorage.removeItem('unimeta_checkin_id');
+
     miCheckin = null;
     document.getElementById('panel-reserva').classList.add('hidden');
     document.getElementById('checkin-resultado').classList.add('hidden');
     document.getElementById('checkin-placa').value = '';
     await cargarDatos();
+}
+
+// ===== Sonido de confirmación (web audio API) =====
+function tocarSonidoExito() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const notas = [523, 659, 784]; // Do, Mi, Sol
+        notas.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const t = ctx.currentTime + i * 0.12;
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.25, t + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+            osc.start(t);
+            osc.stop(t + 0.25);
+        });
+    } catch(e) { /* AudioContext no disponible */ }
+}
+
+// ===== UI Dialogs personalizados =====
+function uiAlert(titulo, mensaje, icono = '⚠️') {
+    return new Promise((resolve) => {
+        document.getElementById('custom-dialog-title').textContent = titulo;
+        document.getElementById('custom-dialog-msg').textContent = mensaje;
+        document.getElementById('custom-dialog-icon').textContent = icono;
+        const actions = document.getElementById('custom-dialog-actions');
+        actions.innerHTML = '<button class="custom-dialog-btn custom-dialog-btn-primary" id="btn-dialog-ok">Aceptar</button>';
+        document.getElementById('custom-dialog-overlay').classList.remove('hidden');
+        document.getElementById('btn-dialog-ok').onclick = () => {
+            document.getElementById('custom-dialog-overlay').classList.add('hidden');
+            resolve();
+        };
+    });
+}
+
+function uiConfirm(titulo, mensaje, icono = '❓') {
+    return new Promise((resolve) => {
+        document.getElementById('custom-dialog-title').textContent = titulo;
+        document.getElementById('custom-dialog-msg').textContent = mensaje;
+        document.getElementById('custom-dialog-icon').textContent = icono;
+        const actions = document.getElementById('custom-dialog-actions');
+        actions.innerHTML = `
+            <button class="custom-dialog-btn custom-dialog-btn-secondary" id="btn-dialog-cancel">Cancelar</button>
+            <button class="custom-dialog-btn custom-dialog-btn-primary" id="btn-dialog-ok">Confirmar</button>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.remove('hidden');
+        document.getElementById('btn-dialog-ok').onclick = () => {
+            document.getElementById('custom-dialog-overlay').classList.add('hidden');
+            resolve(true);
+        };
+        document.getElementById('btn-dialog-cancel').onclick = () => {
+            document.getElementById('custom-dialog-overlay').classList.add('hidden');
+            resolve(false);
+        };
+    });
 }

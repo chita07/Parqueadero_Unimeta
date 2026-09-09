@@ -1,22 +1,20 @@
-/* ===== Reset & Base ===== */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+/* ===== MAPA DEL PARQUEADERO — Premium v2.0 ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f5f6fa;
-    color: #333;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    background: #f1f5f9;
+    color: #1e293b;
     min-height: 100vh;
 }
 
-/* ===== Header ===== */
+/* ===== HEADER ===== */
 header {
-    background-color: #E30614;
-    padding: 16px 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #E30614 0%, #c0050f 100%);
+    padding: 14px 0;
+    box-shadow: 0 4px 20px rgba(227, 6, 20, 0.3);
     position: sticky;
     top: 0;
     z-index: 100;
@@ -25,7 +23,7 @@ header {
 .header-content {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 0 20px;
+    padding: 0 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -34,57 +32,62 @@ header {
 .logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
 }
 
 .logo-img {
-    height: 50px;
+    height: 46px;
     width: auto;
     object-fit: contain;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
 }
 
 nav {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    align-items: center;
 }
 
 .btn-nav {
-    background-color: transparent;
+    background: rgba(255,255,255,0.12);
     color: white;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255,255,255,0.25);
     padding: 8px 18px;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     font-weight: 600;
     font-size: 13px;
     text-decoration: none;
     transition: all 0.2s ease;
+    font-family: inherit;
 }
 
 .btn-nav:hover {
-    background-color: white;
-    color: #E30614;
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.4);
+    transform: translateY(-1px);
 }
 
 .btn-nav-primary {
-    background-color: #FFCD1C;
-    color: #333;
+    background: #FFCD1C;
+    color: #1a1a1a;
     border-color: #FFCD1C;
+    font-weight: 700;
 }
 
 .btn-nav-primary:hover {
-    background-color: #FFB300;
-    color: #333;
+    background: #f5c200;
+    border-color: #f5c200;
 }
 
-/* ===== Main Container ===== */
+/* ===== MAIN CONTAINER ===== */
 .mapa-container {
-    max-width: 900px;
+    max-width: 960px;
     margin: 0 auto;
-    padding: 24px 16px;
+    padding: 28px 20px;
 }
 
-/* ===== Mapa Header ===== */
+/* ===== MAPA HEADER ===== */
 .mapa-header {
     display: flex;
     justify-content: space-between;
@@ -95,223 +98,305 @@ nav {
 }
 
 .mapa-title {
-    font-size: 24px;
-    color: #333;
-    font-weight: 700;
+    font-size: 26px;
+    color: #0f172a;
+    font-weight: 800;
+    letter-spacing: -0.5px;
 }
 
 .mapa-subtitle {
     font-size: 13px;
-    color: #888;
+    color: #64748b;
     margin-top: 4px;
+    font-weight: 400;
 }
 
+/* ===== DISPONIBILIDAD BADGE ===== */
 .disponibilidad-badge {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     background: white;
-    padding: 10px 18px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-    border-left: 4px solid #2eb85c;
+    padding: 10px 20px;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border-left: 4px solid #22c55e;
     flex-shrink: 0;
+    transition: border-color 0.3s;
 }
 
-.disp-icon {
-    font-size: 22px;
-}
+.disp-icon { font-size: 22px; }
 
 .disp-text {
-    font-size: 14px;
-    color: #555;
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 500;
 }
 
 .disp-text strong {
-    color: #2eb85c;
-    font-size: 18px;
+    color: #22c55e;
+    font-size: 20px;
+    font-weight: 800;
+    transition: color 0.3s;
 }
 
-/* ===== Leyenda ===== */
+/* ===== LEYENDA ===== */
 .leyenda {
     display: flex;
-    gap: 20px;
+    gap: 16px;
     margin-bottom: 20px;
     flex-wrap: wrap;
+    background: white;
+    padding: 12px 18px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    align-items: center;
 }
 
 .leyenda-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    color: #666;
+    gap: 7px;
+    font-size: 12px;
+    color: #475569;
     font-weight: 500;
 }
 
 .leyenda-color {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    width: 14px;
+    height: 22px;
+    border-radius: 3px;
+    border: 2px dashed rgba(0,0,0,0.15);
+    flex-shrink: 0;
 }
 
-.leyenda-color.libre {
-    background-color: #2eb85c;
-}
+.leyenda-color.libre     { background: linear-gradient(180deg, #22c55e, #16a34a); }
+.leyenda-color.ocupado   { background: linear-gradient(180deg, #ef4444, #b91c1c); }
+.leyenda-color.mi-espacio{ background: linear-gradient(180deg, #fbbf24, #f59e0b); }
+.leyenda-color.cedida    { background: linear-gradient(180deg, #a78bfa, #7c3aed); }
+.leyenda-color.reservada { background: linear-gradient(180deg, #fb923c, #ea580c); }
 
-.leyenda-color.ocupado {
-    background-color: #E30614;
-}
-
-.leyenda-color.mi-espacio {
-    background-color: #FFCD1C;
-}
-
-.leyenda-color.cedida {
-    background-color: #8B5CF6;
-}
-
-.leyenda-color.reservada {
-    background-color: #F59E0B;
-}
-
-/* ===== Mapa Wrapper ===== */
+/* ===== MAPA WRAPPER — contenedor card ===== */
 .mapa-wrapper {
     background: white;
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.1);
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
 }
 
-/* ===== Parqueadero Layout ===== */
+/* ===== PARQUEADERO — Asfalto Premium ===== */
 .parqueadero {
     display: grid;
-    grid-template-columns: 140px 1fr 80px;
-    grid-template-rows: auto auto auto auto auto auto;
-    gap: 8px;
-    min-width: 340px;
-    max-width: 600px;
+    grid-template-columns: 155px 1fr 90px;
+    grid-template-rows: auto auto auto auto auto auto auto;
+    gap: 10px;
+    min-width: 360px;
+    max-width: 650px;
     margin: 0 auto;
-    padding: 16px;
-    border: 3px solid #333;
-    border-radius: 12px;
+    padding: 20px;
+    border-radius: 16px;
     position: relative;
-    background: #fafafa;
+
+    /* Dark asphalt */
+    background: #1c2233;
+    background-image:
+        radial-gradient(ellipse at 18% 25%, rgba(255,255,255,0.025) 0%, transparent 55%),
+        radial-gradient(ellipse at 82% 75%, rgba(255,255,255,0.018) 0%, transparent 55%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%231c2233'/%3E%3Crect x='0' y='0' width='1' height='1' fill='rgba(255,255,255,0.015)'/%3E%3C/svg%3E");
+    box-shadow:
+        inset 0 0 80px rgba(0,0,0,0.55),
+        0 8px 40px rgba(0,0,0,0.35);
 }
 
-/* ===== Zonas ===== */
+/* ===== ZONAS ===== */
 .zona {
     display: flex;
-    gap: 4px;
-    padding: 4px;
-    border-radius: 6px;
-    background: rgba(46, 184, 92, 0.06);
-    border: 1px dashed rgba(46, 184, 92, 0.25);
+    gap: 5px;
+    padding: 8px 6px 6px 6px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.07);
+    position: relative;
 }
 
-/* Zona Superior Izquierda: fila 1, col 1 */
-.zona-sup-izq {
-    grid-column: 1;
-    grid-row: 1;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
+/* Zone label via data attribute */
+.zona::before {
+    content: attr(data-zona-label);
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30, 40, 65, 0.9);
+    color: rgba(255,255,255,0.45);
+    font-size: 7.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    white-space: nowrap;
+    border: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Zona Superior Derecha: fila 1, col 2 */
-.zona-sup-der {
-    grid-column: 2;
-    grid-row: 1;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-}
+/* Zone grid positioning */
+.zona-sup-izq { grid-column: 1; grid-row: 1; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; }
+.zona-sup-der { grid-column: 2; grid-row: 1; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; }
+.zona-der     { grid-column: 3; grid-row: 1 / 8; flex-direction: column; align-items: center; }
+.zona-izq     { grid-column: 1; grid-row: 2; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; }
+.zona-inf-izq { grid-column: 1; grid-row: 5; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+.zona-inf-der { grid-column: 2; grid-row: 6; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
 
-/* Zona Derecha: fila 1-6, col 3 */
-.zona-der {
-    grid-column: 3;
-    grid-row: 1 / 7;
-    flex-direction: column;
+/* ===== FLECHAS DE TRÁFICO — Animadas ===== */
+.flecha {
+    display: flex;
     align-items: center;
-}
-
-/* Zona Izquierda (arriba ascensor): fila 2, col 1 */
-.zona-izq {
-    grid-column: 1;
-    grid-row: 2;
-    flex-direction: row;
-    flex-wrap: wrap;
     justify-content: center;
+    position: relative;
+    overflow: hidden;
+    border-radius: 4px;
+    min-height: 28px;
 }
 
-/* Flecha superior: fila 2, col 2 */
-.flecha-sup {
-    grid-column: 2;
-    grid-row: 2;
+.flecha-sup        { grid-column: 2; grid-row: 2; }
+.flecha-centro-sube{ grid-column: 2; grid-row: 3 / 5; }
+.flecha-inf        { grid-column: 2; grid-row: 5; }
+
+/* Animated dashed traffic flow — horizontal arrows */
+.flecha-sup::after,
+.flecha-inf::after {
+    content: '';
+    position: absolute;
+    height: 3px;
+    width: 200%;
+    top: 50%;
+    transform: translateY(-50%);
+    background-image: repeating-linear-gradient(
+        90deg,
+        rgba(255,205,28,0.85) 0px,
+        rgba(255,205,28,0.85) 14px,
+        transparent 14px,
+        transparent 24px
+    );
 }
 
-/* Ascensor: fila 3, col 1 */
+.flecha-sup::after  { animation: flowLeft  0.7s linear infinite; }
+.flecha-inf::after  { animation: flowRight 0.7s linear infinite; }
+
+/* Animated dashed traffic flow — vertical arrow */
+.flecha-centro-sube::after {
+    content: '';
+    position: absolute;
+    width: 3px;
+    height: 200%;
+    left: 50%;
+    top: 0;
+    transform: translateX(-50%);
+    background-image: repeating-linear-gradient(
+        180deg,
+        rgba(255,205,28,0.85) 0px,
+        rgba(255,205,28,0.85) 14px,
+        transparent 14px,
+        transparent 24px
+    );
+    animation: flowUp 0.7s linear infinite;
+}
+
+/* Arrow head indicators (small triangles) */
+.flecha-sup::before {
+    content: '◀';
+    font-size: 10px;
+    color: rgba(255,205,28,0.6);
+    position: absolute;
+    left: 4px;
+    z-index: 1;
+}
+
+.flecha-inf::before {
+    content: '▶';
+    font-size: 10px;
+    color: rgba(255,205,28,0.6);
+    position: absolute;
+    right: 4px;
+    z-index: 1;
+}
+
+.flecha-centro-sube::before {
+    content: '▲';
+    font-size: 10px;
+    color: rgba(255,205,28,0.6);
+    position: absolute;
+    top: 4px;
+    z-index: 1;
+}
+
+@keyframes flowRight {
+    from { transform: translateY(-50%) translateX(0); }
+    to   { transform: translateY(-50%) translateX(-50%); }
+}
+@keyframes flowLeft {
+    from { transform: translateY(-50%) translateX(-50%); }
+    to   { transform: translateY(-50%) translateX(0); }
+}
+@keyframes flowUp {
+    from { transform: translateX(-50%) translateY(0); }
+    to   { transform: translateX(-50%) translateY(-50%); }
+}
+
+/* ===== ASCENSOR — Metálico 3D ===== */
 .ascensor {
     grid-column: 1;
     grid-row: 3 / 5;
-    background: #f0f0f0;
-    border: 2px solid #ccc;
-    border-radius: 8px;
+    background: linear-gradient(160deg, #2d3a56 0%, #1a2235 50%, #141b2e 100%);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    min-height: 80px;
+    gap: 6px;
+    min-height: 90px;
+    box-shadow:
+        inset 0 2px 0 rgba(255,255,255,0.1),
+        inset 0 -2px 4px rgba(0,0,0,0.4),
+        inset 2px 0 0 rgba(255,255,255,0.04),
+        inset -2px 0 0 rgba(0,0,0,0.3),
+        0 4px 16px rgba(0,0,0,0.5);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Metal door lines */
+.ascensor::before {
+    content: '';
+    position: absolute;
+    top: 15%;
+    bottom: 15%;
+    left: calc(50% - 0.5px);
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(255,255,255,0.12), transparent);
 }
 
 .ascensor-icon {
-    font-size: 28px;
+    font-size: 26px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+    position: relative;
+    z-index: 1;
 }
 
 .ascensor-label {
-    font-size: 11px;
-    color: #888;
-    font-weight: 600;
+    font-size: 9px;
+    color: rgba(255,255,255,0.4);
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1.5px;
+    position: relative;
+    z-index: 1;
 }
 
-/* Flecha centro sube: fila 3-4, col 2 */
-.flecha-centro-sube {
-    grid-column: 2;
-    grid-row: 3 / 5;
-}
-
-/* Zona Inferior Izquierda: fila 5, col 1 */
-.zona-inf-izq {
-    grid-column: 1;
-    grid-row: 5;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-/* Flecha inferior: fila 5, col 2 */
-.flecha-inf {
-    grid-column: 2;
-    grid-row: 5;
-}
-
-/* Zona Inferior Derecha: fila 6, col 2 */
-.zona-inf-der {
-    grid-column: 2;
-    grid-row: 6;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-}
-
-/* Columna referencia: fila 6, col 1 */
+/* ===== COLUMNA REFERENCIA ===== */
 .columna-ref {
     grid-column: 1;
     grid-row: 6;
@@ -321,14 +406,17 @@ nav {
 }
 
 .columna-circulo {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    border: 3px solid #999;
-    background: #f0f0f0;
+    border: 3px solid rgba(255,255,255,0.12);
+    background: rgba(0,0,0,0.3);
+    box-shadow:
+        inset 0 2px 8px rgba(0,0,0,0.6),
+        0 2px 6px rgba(0,0,0,0.4);
 }
 
-/* Entrada: fila 7, col 1-3 */
+/* ===== ENTRADA — Barrera animada ===== */
 .entrada {
     grid-column: 1 / 4;
     grid-row: 7;
@@ -336,468 +424,206 @@ nav {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 12px;
-    gap: 4px;
+    padding: 12px 8px 8px 8px;
+    gap: 5px;
+    border-top: 2px dashed rgba(255,255,255,0.1);
+    position: relative;
+}
+
+/* Scanning beam on entry line */
+.entrada::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,205,28,0.8), transparent);
+    animation: scanEntrada 2.5s ease-in-out infinite;
+    border-radius: 1px;
+}
+
+@keyframes scanEntrada {
+    0%, 100% { opacity: 0; transform: scaleX(0.2); }
+    40%, 60%  { opacity: 1; transform: scaleX(1); }
 }
 
 .entrada-flecha {
-    font-size: 28px;
-    color: #E30614;
-    font-weight: 700;
-    animation: pulseArrow 1.5s ease-in-out infinite;
+    font-size: 26px;
+    color: #FFCD1C;
+    font-weight: 900;
+    animation: bounceUp 1.5s ease-in-out infinite;
+    text-shadow: 0 0 20px rgba(255,205,28,0.9);
+    filter: drop-shadow(0 0 8px rgba(255,205,28,0.7));
 }
 
-@keyframes pulseArrow {
-    0%, 100% { transform: translateY(0); opacity: 1; }
-    50% { transform: translateY(-6px); opacity: 0.6; }
+@keyframes bounceUp {
+    0%, 100% { transform: translateY(0); opacity: 0.75; }
+    50%       { transform: translateY(-8px); opacity: 1; }
 }
 
 .entrada-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: #E30614;
-    letter-spacing: 2px;
+    font-size: 10px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 4px;
     text-transform: uppercase;
+    font-family: 'Inter', monospace;
 }
 
-/* ===== Flechas de flujo ===== */
-.flecha {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    color: #E30614;
-    font-weight: 700;
-    opacity: 0.5;
-}
-
-/* ===== Espacios Individuales ===== */
+/* ===== ESPACIOS INDIVIDUALES ===== */
 .espacio {
+    /* Portrait — moto estacionada de frente a la pared */
     width: 44px;
-    height: 44px;
+    height: 64px;
     border-radius: 6px;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-    transition: all 0.25s ease;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     position: relative;
-    border: 2px solid transparent;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
+    gap: 2px;
+
+    /* Default: slot vacío */
+    background: rgba(0,0,0,0.22);
+    border: 2px dashed rgba(255,255,255,0.18);
+    color: rgba(255,255,255,0.2);
 }
 
-.espacio span {
-    position: relative;
-    z-index: 1;
+/* Slot number */
+.espacio .slot-num {
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    font-family: 'Inter', sans-serif;
 }
 
-/* Estado: Libre */
+/* Motorcycle icon */
+.espacio .moto-icon {
+    font-size: 16px;
+    line-height: 1;
+    display: block;
+}
+
+/* ===== ESTADO: LIBRE ===== */
 .espacio.libre {
-    background-color: #2eb85c;
+    background: linear-gradient(180deg, #22c55e 0%, #15803d 100%);
+    border: 2px dashed rgba(255,255,255,0.55);
     color: white;
-    border-color: #249a4d;
+    box-shadow:
+        0 2px 14px rgba(34,197,94,0.38),
+        inset 0 1px 0 rgba(255,255,255,0.25),
+        inset 0 -1px 0 rgba(0,0,0,0.15);
 }
 
 .espacio.libre:hover {
-    background-color: #249a4d;
-    transform: scale(1.08);
-    box-shadow: 0 3px 12px rgba(46, 184, 92, 0.35);
+    transform: scale(1.1) translateY(-3px);
+    box-shadow:
+        0 8px 28px rgba(34,197,94,0.55),
+        inset 0 1px 0 rgba(255,255,255,0.35);
+    border-color: rgba(255,255,255,0.85);
+    z-index: 1;
 }
 
-/* Estado: Ocupado */
+/* ===== ESTADO: OCUPADO ===== */
 .espacio.ocupado {
-    background-color: #E30614;
+    background: linear-gradient(180deg, #f43f5e 0%, #b91c1c 100%);
+    border: 2px dashed rgba(255,255,255,0.38);
     color: white;
-    border-color: #b80510;
+    box-shadow:
+        0 2px 14px rgba(239,68,68,0.38),
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        inset 0 -1px 0 rgba(0,0,0,0.2);
 }
 
 .espacio.ocupado:hover {
-    background-color: #b80510;
-    transform: scale(1.08);
-    box-shadow: 0 3px 12px rgba(227, 6, 20, 0.35);
+    transform: scale(1.06);
+    box-shadow:
+        0 6px 24px rgba(239,68,68,0.52),
+        inset 0 1px 0 rgba(255,255,255,0.25);
+    z-index: 1;
 }
 
-/* Estado: Mi espacio */
+/* ===== ESTADO: MI ESPACIO (GOLDEN PULSE) ===== */
 .espacio.mi-espacio {
-    background-color: #FFCD1C;
-    color: #333;
-    border-color: #e6b800;
+    background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+    border: 2px dashed rgba(255,255,255,0.65);
+    color: #1a1000;
+    box-shadow:
+        0 0 0 3px rgba(251,191,36,0.35),
+        0 4px 20px rgba(251,191,36,0.55),
+        inset 0 1px 0 rgba(255,255,255,0.35);
     animation: pulseSpot 2s ease-in-out infinite;
-    box-shadow: 0 0 0 4px rgba(255, 205, 28, 0.3);
     z-index: 2;
-}
-
-/* Estado: Cedida (espacio de mensualista ausente disponible) */
-.espacio.cedida {
-    background-color: #8B5CF6;
-    color: white;
-    border-color: #7C3AED;
-}
-
-.espacio.cedida:hover {
-    background-color: #7C3AED;
-    transform: scale(1.08);
-    box-shadow: 0 3px 12px rgba(139, 92, 246, 0.35);
-}
-
-/* Estado: Reservada */
-.espacio.reservada {
-    background-color: #F59E0B;
-    color: white;
-    border-color: #D97706;
-}
-
-.espacio.reservada:hover {
-    background-color: #D97706;
-    transform: scale(1.08);
-    box-shadow: 0 3px 12px rgba(245, 158, 11, 0.35);
 }
 
 @keyframes pulseSpot {
     0%, 100% {
-        box-shadow: 0 0 0 4px rgba(255, 205, 28, 0.3);
+        box-shadow: 0 0 0 3px rgba(251,191,36,0.35), 0 4px 20px rgba(251,191,36,0.5);
         transform: scale(1);
     }
     50% {
-        box-shadow: 0 0 0 8px rgba(255, 205, 28, 0.15), 0 0 20px rgba(255, 205, 28, 0.2);
-        transform: scale(1.05);
+        box-shadow: 0 0 0 8px rgba(251,191,36,0.2), 0 8px 36px rgba(251,191,36,0.65);
+        transform: scale(1.07);
     }
 }
 
-/* Zona Derecha: espacios más angostos (horizontales) */
+/* ===== ESTADO: CEDIDA ===== */
+.espacio.cedida {
+    background: linear-gradient(180deg, #a78bfa 0%, #6d28d9 100%);
+    border: 2px dashed rgba(255,255,255,0.38);
+    color: white;
+    box-shadow: 0 2px 14px rgba(167,139,250,0.35);
+}
+
+.espacio.cedida:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 22px rgba(167,139,250,0.55);
+    z-index: 1;
+}
+
+/* ===== ESTADO: RESERVADA ===== */
+.espacio.reservada {
+    background: linear-gradient(180deg, #fb923c 0%, #c2410c 100%);
+    border: 2px dashed rgba(255,255,255,0.38);
+    color: white;
+    box-shadow: 0 2px 14px rgba(251,146,60,0.35);
+}
+
+.espacio.reservada:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 22px rgba(251,146,60,0.55);
+    z-index: 1;
+}
+
+/* ===== ZONA DERECHA — Espacios horizontales (moto hacia pared derecha) ===== */
 .zona-der .espacio {
-    width: 62px;
-    height: 34px;
-    font-size: 11px;
+    width: 72px;
+    height: 40px;
+    flex-direction: row;
+    gap: 4px;
+    padding: 0 4px;
 }
 
-/* ===== Panel de Reserva ===== */
-.mi-reserva-panel {
-    margin-bottom: 24px;
+.zona-der .espacio .slot-num { font-size: 10px; }
+.zona-der .espacio .moto-icon { font-size: 15px; }
+
+/* ===== Animación de asignación de espacio ===== */
+@keyframes spaceAssigned {
+    0%   { transform: scale(0.7); opacity: 0.4; }
+    65%  { transform: scale(1.18); opacity: 1; }
+    100% { transform: scale(1);   opacity: 1; }
 }
 
-.mi-reserva-panel.hidden {
-    display: none;
+.espacio.just-assigned {
+    animation: spaceAssigned 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-.reserva-card {
-    background: white;
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-    border-top: 4px solid #FFCD1C;
-}
-
-.reserva-header {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 20px;
-}
-
-.reserva-icon-wrap {
-    font-size: 32px;
-}
-
-.reserva-titulo {
-    font-size: 18px;
-    font-weight: 700;
-    color: #333;
-}
-
-.reserva-subtitulo {
-    font-size: 12px;
-    color: #888;
-    margin-top: 2px;
-}
-
-.reserva-espacio-numero {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.espacio-big {
-    display: inline-block;
-    background: linear-gradient(135deg, #FFCD1C, #FFB300);
-    color: #333;
-    font-size: 42px;
-    font-weight: 800;
-    padding: 16px 40px;
-    border-radius: 14px;
-    box-shadow: 0 4px 16px rgba(255, 205, 28, 0.35);
-}
-
-.reserva-detalles {
-    background: #f8f9fa;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 16px;
-}
-
-.reserva-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-    font-size: 14px;
-}
-
-.reserva-row:last-child {
-    border-bottom: none;
-}
-
-.reserva-label {
-    color: #888;
-}
-
-.reserva-value {
-    color: #333;
-    font-weight: 600;
-}
-
-/* ===== Temporizador ===== */
-.temporizador {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 14px;
-    background: linear-gradient(135deg, #fff5f5, #fffbeb);
-    border-radius: 10px;
-    border: 1px solid #fde8e8;
-}
-
-.temp-icon {
-    font-size: 20px;
-}
-
-.temp-texto {
-    font-size: 13px;
-    color: #888;
-}
-
-.temp-valor {
-    font-size: 16px;
-    font-weight: 700;
-    color: #E30614;
-}
-
-/* ===== Tooltip ===== */
-.tooltip-espacio {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: white;
-    border-radius: 20px 20px 0 0;
-    padding: 24px;
-    box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.15);
-    z-index: 200;
-    transform: translateY(0);
-    transition: transform 0.3s ease;
-}
-
-.tooltip-espacio.hidden {
-    transform: translateY(100%);
-    pointer-events: none;
-}
-
-.tooltip-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-}
-
-.tooltip-titulo {
-    font-size: 18px;
-    font-weight: 700;
-    color: #333;
-}
-
-.tooltip-cerrar {
-    background: #f0f0f0;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 14px;
-    color: #666;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s;
-}
-
-.tooltip-cerrar:hover {
-    background: #e0e0e0;
-}
-
-.tooltip-body {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 12px 16px;
-}
-
-.tooltip-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-    font-size: 14px;
-    color: #666;
-}
-
-.tooltip-row:last-child {
-    border-bottom: none;
-}
-
-.tooltip-row strong {
-    color: #333;
-}
-
-/* Overlay detrás del tooltip */
-.tooltip-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: 199;
-}
-
-.tooltip-overlay.hidden {
-    display: none;
-}
-
-/* ===== Footer ===== */
-footer {
-    background-color: #f9f9f9;
-    color: #666;
-    padding: 30px 20px;
-    text-align: center;
-    border-top: 1px solid #f0f0f0;
-    margin-top: 40px;
-}
-
-footer p {
-    font-size: 13px;
-}
-
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-    html, body {
-        overflow-x: hidden;
-        width: 100%;
-        max-width: 100vw;
-    }
-
-    .header-content {
-        padding: 0 12px;
-        flex-wrap: wrap;
-        gap: 10px;
-        justify-content: center;
-    }
-
-    .logo {
-        justify-content: center;
-        width: 100%;
-    }
-
-    .logo-img {
-        height: 38px;
-    }
-
-    nav {
-        justify-content: center;
-        width: 100%;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
-
-    .btn-nav {
-        padding: 6px 12px;
-        font-size: 12px;
-    }
-}
-
-@media (max-width: 600px) {
-    .mapa-container {
-        padding: 16px 10px;
-    }
-
-    .mapa-header {
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .mapa-title {
-        font-size: 20px;
-    }
-
-    .disponibilidad-badge {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .parqueadero {
-        grid-template-columns: 110px 1fr 66px;
-        padding: 10px;
-        gap: 5px;
-    }
-
-    .espacio {
-        width: 38px;
-        height: 38px;
-        font-size: 11px;
-    }
-
-    .zona-der .espacio {
-        width: 52px;
-        height: 30px;
-        font-size: 10px;
-    }
-
-    .espacio-big {
-        font-size: 32px;
-        padding: 12px 30px;
-    }
-
-    .reserva-card {
-        padding: 18px;
-    }
-}
-
-@media (max-width: 380px) {
-    .parqueadero {
-        grid-template-columns: 90px 1fr 56px;
-        padding: 8px;
-        gap: 3px;
-    }
-
-    .espacio {
-        width: 34px;
-        height: 34px;
-        font-size: 10px;
-    }
-
-    .zona-der .espacio {
-        width: 46px;
-        height: 28px;
-        font-size: 9px;
-    }
-
-    .ascensor-icon {
-        font-size: 22px;
-    }
-}
-
-/* ===== Jornada Badge (header) ===== */
+/* ===== JORNADA BADGE ===== */
 .mapa-header-right {
     display: flex;
     flex-direction: column;
@@ -810,41 +636,40 @@ footer p {
     display: flex;
     align-items: center;
     gap: 10px;
-    background: linear-gradient(135deg, #fff9e6, #ffffff);
+    background: linear-gradient(135deg, #fff9e6, #fffef0);
     border: 1.5px solid #FFCD1C;
-    padding: 8px 16px;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(255, 205, 28, 0.2);
+    padding: 10px 18px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(255,205,28,0.2);
 }
 
 .jornada-badge.jornada-fuera {
-    background: linear-gradient(135deg, #f5f5f5, #ffffff);
-    border-color: #ccc;
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+    border-color: #cbd5e1;
+    box-shadow: none;
 }
 
-.jornada-badge-icon {
-    font-size: 22px;
-}
+.jornada-badge-icon { font-size: 22px; }
 
 .jornada-badge-label {
     display: block;
     font-size: 13px;
     font-weight: 700;
-    color: #333;
+    color: #1e293b;
 }
 
 .jornada-badge-hora {
     display: block;
     font-size: 11px;
-    color: #888;
+    color: #64748b;
 }
 
-/* ===== Panel de Check-in ===== */
+/* ===== PANEL CHECK-IN ===== */
 .checkin-panel {
     background: white;
-    border-radius: 14px;
+    border-radius: 16px;
     padding: 20px 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     border-left: 5px solid #FFCD1C;
     margin-bottom: 20px;
 }
@@ -861,21 +686,19 @@ footer p {
     gap: 14px;
 }
 
-.checkin-panel-icon {
-    font-size: 32px;
-    flex-shrink: 0;
-}
+.checkin-panel-icon { font-size: 30px; flex-shrink: 0; }
 
 .checkin-info h3 {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
-    color: #333;
-    margin-bottom: 4px;
+    color: #1e293b;
+    margin-bottom: 3px;
 }
 
 .checkin-info p {
     font-size: 13px;
-    color: #666;
+    color: #64748b;
+    line-height: 1.5;
 }
 
 .checkin-form {
@@ -886,99 +709,496 @@ footer p {
 .checkin-form input {
     flex: 1;
     padding: 12px 16px;
-    border: 1.5px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 15px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 16px;
     font-family: inherit;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
     transition: border-color 0.2s, box-shadow 0.2s;
+    color: #1e293b;
+    background: #fafafa;
 }
 
 .checkin-form input:focus {
     outline: none;
     border-color: #E30614;
-    box-shadow: 0 0 0 3px rgba(227,6,20,0.08);
+    box-shadow: 0 0 0 3px rgba(227,6,20,0.1);
+    background: white;
 }
 
 .btn-checkin {
-    background: linear-gradient(135deg, #E30614, #c20410);
+    background: linear-gradient(135deg, #E30614, #b80510);
     color: white;
     border: none;
     padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 15px;
+    border-radius: 10px;
+    font-size: 14px;
     font-weight: 700;
+    font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.2s ease;
-    font-family: inherit;
+    transition: all 0.2s;
+    box-shadow: 0 4px 16px rgba(227,6,20,0.3);
+    letter-spacing: 0.3px;
 }
 
 .btn-checkin:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(227,6,20,0.3);
+    box-shadow: 0 6px 22px rgba(227,6,20,0.42);
 }
 
+.btn-checkin:active { transform: translateY(0); }
+
 .btn-checkin:disabled {
-    opacity: 0.6;
+    opacity: 0.7;
     cursor: not-allowed;
     transform: none;
 }
 
-/* Resultado check-in */
 .checkin-resultado {
-    padding: 12px 16px;
-    border-radius: 8px;
     font-size: 14px;
-    line-height: 1.5;
-    animation: fadeIn 0.3s ease;
+    border-radius: 10px;
+    padding: 12px 16px;
+    line-height: 1.6;
 }
 
 .checkin-resultado.hidden { display: none; }
 
 .checkin-resultado-success {
-    background: #edfff5;
-    border: 1.5px solid #2eb85c;
-    color: #1a7a3c;
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    font-weight: 500;
 }
 
 .checkin-resultado-error {
-    background: #fff5f5;
-    border: 1.5px solid #E30614;
-    color: #a00;
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    font-weight: 500;
 }
 
 .checkin-resultado-warning {
-    background: #fffbe6;
-    border: 1.5px solid #FFCD1C;
-    color: #7a5c00;
+    background: #fffbeb;
+    color: #b45309;
+    border: 1px solid #fde68a;
+    font-weight: 500;
 }
 
-.checkin-resultado a {
+/* ===== PANEL RESERVA ===== */
+.mi-reserva-panel { margin-bottom: 24px; }
+.mi-reserva-panel.hidden { display: none; }
+
+.reserva-card {
+    background: white;
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: 0 8px 36px rgba(0,0,0,0.1);
+    border-top: 4px solid #FFCD1C;
+    position: relative;
+    overflow: hidden;
+}
+
+.reserva-card::after {
+    content: '🅿️';
+    position: absolute;
+    right: 16px;
+    top: 16px;
+    font-size: 52px;
+    opacity: 0.05;
+    pointer-events: none;
+    user-select: none;
+}
+
+.reserva-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.reserva-icon-wrap { font-size: 28px; }
+
+.reserva-titulo {
+    font-size: 17px;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.reserva-subtitulo {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.reserva-espacio-numero {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.espacio-big {
+    display: inline-block;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: #1a1000;
+    font-size: 48px;
+    font-weight: 900;
+    padding: 16px 44px;
+    border-radius: 16px;
+    box-shadow:
+        0 6px 28px rgba(251,191,36,0.42),
+        inset 0 1px 0 rgba(255,255,255,0.35),
+        inset 0 -2px 0 rgba(0,0,0,0.1);
+    letter-spacing: -1px;
+    font-family: 'Inter', sans-serif;
+}
+
+.reserva-detalles {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 4px 0;
+    margin-bottom: 16px;
+}
+
+.reserva-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 13px;
+}
+
+.reserva-row:last-child { border-bottom: none; }
+.reserva-label { color: #94a3b8; font-weight: 500; }
+.reserva-value { color: #1e293b; font-weight: 700; }
+
+/* ===== TEMPORIZADOR ===== */
+.temporizador {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #fff1f2, #fef9ee);
+    border-radius: 12px;
+    border: 1px solid rgba(227,6,20,0.15);
+}
+
+.temp-icon { font-size: 20px; }
+.temp-texto { font-size: 13px; color: #94a3b8; font-weight: 500; }
+.temp-valor {
+    font-size: 20px;
+    font-weight: 800;
     color: #E30614;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 1px;
+}
+
+/* ===== TOOLTIP ESPACIO — Card premium (bottom sheet) ===== */
+.tooltip-espacio {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 24px 24px 0 0;
+    padding: 0;
+    box-shadow: 0 -8px 48px rgba(0,0,0,0.22);
+    z-index: 200;
+    transform: translateY(0);
+    transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.tooltip-espacio.hidden {
+    transform: translateY(102%);
+    pointer-events: none;
+}
+
+/* Handle bar */
+.tooltip-espacio::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    margin: 12px auto 4px auto;
+}
+
+.tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 22px 14px 22px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.tooltip-titulo {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.tooltip-cerrar {
+    background: #f1f5f9;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 13px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.tooltip-cerrar:hover { background: #e2e8f0; }
+
+.tooltip-body {
+    padding: 8px 22px 28px 22px;
+}
+
+.tooltip-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 11px 0;
+    border-bottom: 1px solid #f8fafc;
+    font-size: 14px;
+    color: #64748b;
+}
+
+.tooltip-row:last-child { border-bottom: none; }
+.tooltip-row strong {
+    color: #1e293b;
     font-weight: 700;
+    text-align: right;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to   { opacity: 1; transform: translateY(0); }
+/* Backdrop overlay */
+.tooltip-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.38);
+    z-index: 199;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
 }
 
-/* Responsive check-in */
+.tooltip-overlay.hidden { display: none; }
+
+/* ===== CUSTOM DIALOG ===== */
+.custom-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 300;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.custom-dialog-overlay.hidden { display: none; }
+
+.custom-dialog {
+    background: white;
+    border-radius: 20px;
+    padding: 32px 28px 24px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+    animation: dialogIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes dialogIn {
+    from { transform: scale(0.85); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+
+.custom-dialog-icon { font-size: 40px; margin-bottom: 14px; display: block; }
+.custom-dialog-title { font-size: 18px; font-weight: 800; color: #1e293b; margin-bottom: 8px; }
+.custom-dialog-msg   { font-size: 14px; color: #64748b; line-height: 1.6; margin-bottom: 22px; }
+
+.custom-dialog-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.custom-dialog-btn {
+    padding: 11px 26px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+}
+
+.custom-dialog-btn-primary {
+    background: linear-gradient(135deg, #E30614, #b80510);
+    color: white;
+    box-shadow: 0 4px 14px rgba(227,6,20,0.3);
+}
+
+.custom-dialog-btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(227,6,20,0.4);
+}
+
+.custom-dialog-btn-secondary {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.custom-dialog-btn-secondary:hover {
+    background: #e2e8f0;
+}
+
+/* ===== FOOTER ===== */
+footer {
+    background: white;
+    color: #94a3b8;
+    padding: 28px 20px;
+    text-align: center;
+    border-top: 1px solid #f1f5f9;
+    margin-top: 40px;
+}
+
+footer p { font-size: 13px; }
+
+/* ===== RESPONSIVE — Tablet ===== */
+@media (max-width: 768px) {
+    html, body { overflow-x: hidden; width: 100%; max-width: 100vw; }
+
+    .header-content {
+        padding: 0 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
+    }
+
+    .logo { justify-content: center; width: 100%; }
+    .logo-img { height: 36px; }
+
+    nav {
+        justify-content: center;
+        width: 100%;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .btn-nav { padding: 7px 12px; font-size: 12px; }
+}
+
+/* ===== RESPONSIVE — Mobile ===== */
 @media (max-width: 600px) {
+    .mapa-container { padding: 14px 12px; }
+
+    .mapa-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
     .mapa-header-right {
-        align-items: flex-start;
+        align-items: stretch;
         width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
     }
+
     .jornada-badge, .disponibilidad-badge {
-        width: 100%;
+        flex: 1;
+        justify-content: center;
+        min-width: 140px;
     }
+
+    .mapa-title { font-size: 22px; }
+
+    .mapa-wrapper { padding: 14px; border-radius: 14px; }
+
+    .parqueadero {
+        grid-template-columns: 114px 1fr 74px;
+        padding: 12px;
+        gap: 6px;
+    }
+
+    .espacio {
+        width: 38px;
+        height: 54px;
+    }
+
+    .espacio .slot-num { font-size: 10px; }
+    .espacio .moto-icon { font-size: 14px; }
+
+    .zona-der .espacio {
+        width: 60px;
+        height: 34px;
+    }
+
+    .zona-der .espacio .moto-icon { font-size: 13px; }
+
     .checkin-form {
         flex-direction: column;
     }
-    .btn-checkin {
-        width: 100%;
+
+    .checkin-form input {
+        font-size: 18px;
+        text-align: center;
+    }
+
+    .espacio-big {
+        font-size: 40px;
+        padding: 14px 36px;
+    }
+
+    .reserva-card { padding: 16px; }
+
+    .leyenda { gap: 10px; padding: 10px 14px; }
+
+    .entrada-label { letter-spacing: 2.5px; }
+}
+
+/* ===== RESPONSIVE — Small phones ===== */
+@media (max-width: 390px) {
+    .parqueadero {
+        grid-template-columns: 92px 1fr 60px;
+        padding: 8px;
+        gap: 4px;
+    }
+
+    .espacio {
+        width: 32px;
+        height: 46px;
+    }
+
+    .espacio .slot-num { font-size: 9px; }
+    .espacio .moto-icon { font-size: 12px; }
+
+    .zona-der .espacio {
+        width: 50px;
+        height: 28px;
+    }
+
+    .zona-der .espacio .slot-num { font-size: 9px; }
+    .zona-der .espacio .moto-icon { font-size: 11px; }
+
+    .ascensor-icon { font-size: 20px; }
+    .ascensor-label { font-size: 7.5px; }
+
+    .espacio-big {
+        font-size: 34px;
+        padding: 12px 28px;
     }
 }

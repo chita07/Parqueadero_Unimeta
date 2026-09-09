@@ -153,6 +153,10 @@
                             <span class="resumen-label">Placa</span>
                             <span class="resumen-value" id="resumen-placa">—</span>
                         </div>
+                        <div class="resumen-row">
+                            <span class="resumen-label">Vigencia Estimada</span>
+                            <span class="resumen-value" id="resumen-vigencia" style="font-weight:600;color:#1e293b;">—</span>
+                        </div>
                         <div class="resumen-row total">
                             <span class="resumen-label">Total a Pagar</span>
                             <span class="resumen-value resumen-total" id="resumen-total">$0</span>
@@ -241,9 +245,22 @@
                 </div>
 
                 <button class="btn-ver-mapa" onclick="verMiEspacio()" style="width:100%;background:linear-gradient(135deg,#FFCD1C,#FFB300);color:#333;border:none;padding:14px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;transition:all 0.2s;">📍 Ver mi espacio en el mapa</button>
+                <button class="btn-descargar-comprobante" id="btn-descargar-voucher" onclick="descargarComprobante()" style="width:100%;background:#ffffff;color:#1e293b;border:2px solid #e2e8f0;padding:12px;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s;">📥 Descargar Comprobante Digital (PNG)</button>
                 <button class="btn-volver" onclick="location.href='index.html'">Volver al Inicio</button>
             </div>
         </section>
+
+        <!-- Spinner de Procesamiento de Pago -->
+        <div class="pago-spinner-overlay hidden" id="pago-spinner-overlay">
+            <div class="pago-spinner-card">
+                <div class="pago-spinner-ring"></div>
+                <h3 id="spinner-titulo" style="font-size:18px;color:#1e293b;margin-bottom:6px;">Procesando Pago Seguro...</h3>
+                <p id="spinner-subtitulo" style="font-size:13px;color:#64748b;margin-bottom:18px;">Conectando con la pasarela bancaria</p>
+                <div class="pago-progress-track">
+                    <div class="pago-progress-fill" id="pago-progress-fill"></div>
+                </div>
+            </div>
+        </div>
 
         <!-- Custom UI Dialog -->
         <div class="custom-dialog-overlay hidden" id="custom-dialog-overlay">

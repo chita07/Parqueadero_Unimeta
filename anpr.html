@@ -133,6 +133,17 @@
                     <small>Texto crudo detectado por OCR: <code id="ocr-raw-text"></code></small>
                 </div>
 
+                <!-- Sugerencia Inteligente de Corrección -->
+                <div id="sugerencia-correccion-box" class="sugerencia-correccion hidden" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                    <div style="font-size:13px;color:#1e40af;display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:18px;">💡</span>
+                        <span>Coincidencia cercana en sistema: <strong id="sugerencia-placa-txt" style="font-size:15px;color:#1d4ed8;letter-spacing:1px;">ABC12D</strong> (<span id="sugerencia-nombre-txt"></span>)</span>
+                    </div>
+                    <button type="button" class="btn-verificar" id="btn-aplicar-sugerencia" onclick="aplicarSugerenciaPlaca()" style="padding:6px 14px;font-size:13px;background:#2563eb;">
+                        ⚡ Aplicar Corrección
+                    </button>
+                </div>
+
                 <!-- Corrección Manual -->
                 <div class="correccion-container">
                     <label for="placa-corregida">¿La lectura automática no es exacta? Corrige la placa:</label>
@@ -180,6 +191,13 @@
             </div>
             <div class="historial-lista" id="historial-lista">
                 <div class="loading-historial">Cargando registros...</div>
+            </div>
+            <div class="historial-paginacion" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:1px solid #e5e7eb;margin-top:10px;background:#f9fafb;border-radius:0 0 10px 10px;">
+                <span id="hist-paginacion-info" style="font-size:13px;color:#6b7280;font-weight:600;">Página 1</span>
+                <div style="display:flex;gap:8px;">
+                    <button type="button" class="btn-nueva-captura" id="btn-hist-prev" onclick="cambiarPaginaHistorial(-1)" style="padding:5px 12px;font-size:12px;background:#fff;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">← Anterior</button>
+                    <button type="button" class="btn-nueva-captura" id="btn-hist-next" onclick="cambiarPaginaHistorial(1)" style="padding:5px 12px;font-size:12px;background:#fff;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;">Siguiente →</button>
+                </div>
             </div>
         </div>
     </main>

@@ -29,6 +29,11 @@
             <div class="hero-content">
                 <h1>Bienvenido al Sistema de<br>Parqueadero UNIMETA</h1>
                 <p>Gestiona tu parqueadero de forma rápida y segura.</p>
+                <div class="live-availability-badge" id="live-availability">
+                    <span class="live-dot"></span>
+                    <span id="live-count-text">Consultando disponibilidad...</span>
+                    <a href="mapa.html" class="live-link">Ver mapa en vivo →</a>
+                </div>
                 <div class="hero-buttons">
                     <button class="btn-primary" id="btn-login-hero">Iniciar Sesión</button>
                     <button class="btn-secondary" id="btn-register-hero">Registrarse</button>
@@ -46,31 +51,31 @@
             <h2 class="tarifas-title">Tarifas</h2>
 
             <div class="tarifas-grid">
-                <div class="tarifa-card">
+                <div class="tarifa-card" id="card-tarifa-diario">
                     <div class="tarifa-icon">🏍️</div>
                     <div class="tarifa-label">Diario</div>
                     <h3>Moto - Tarifa Día</h3>
-                    <p class="tarifa-price">$2,000 <span>/ día</span></p>
-                    <button class="btn-seleccionar"
+                    <p class="tarifa-price" id="precio-tarifa-diario">$2,000 <span>/ día</span></p>
+                    <button class="btn-seleccionar" id="btn-tarifa-diario"
                         onclick="location.href='pago.html?plan=diario&precio=2000&nombre=Diario'">Seleccionar</button>
                 </div>
 
-                <div class="tarifa-card popular">
+                <div class="tarifa-card popular" id="card-tarifa-semanal">
                     <div class="tarifa-badge">Popular</div>
                     <div class="tarifa-icon">🏍️</div>
                     <div class="tarifa-label">Semanal</div>
                     <h3>Moto - Tarifa Semana</h3>
-                    <p class="tarifa-price">$10,000 <span>/ semana</span></p>
-                    <button class="btn-seleccionar"
+                    <p class="tarifa-price" id="precio-tarifa-semanal">$10,000 <span>/ semana</span></p>
+                    <button class="btn-seleccionar" id="btn-tarifa-semanal"
                         onclick="location.href='pago.html?plan=semanal&precio=10000&nombre=Semanal'">Seleccionar</button>
                 </div>
 
-                <div class="tarifa-card">
+                <div class="tarifa-card" id="card-tarifa-mensual">
                     <div class="tarifa-icon">🏍️</div>
                     <div class="tarifa-label">Mensual</div>
                     <h3>Moto - Tarifa Mes</h3>
-                    <p class="tarifa-price">$45,000 <span>/ mes</span></p>
-                    <button class="btn-seleccionar"
+                    <p class="tarifa-price" id="precio-tarifa-mensual">$45,000 <span>/ mes</span></p>
+                    <button class="btn-seleccionar" id="btn-tarifa-mensual"
                         onclick="location.href='pago.html?plan=mensual&precio=45000&nombre=Mensual'">Seleccionar</button>
                 </div>
             </div>

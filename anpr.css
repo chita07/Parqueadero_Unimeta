@@ -928,4 +928,25 @@ footer {
     .plate-code {
         font-size: 28px;
     }
+
+    .btn-capturar, .btn-procesar, .btn-verificar, .btn-accion-pago, .btn-accion-mapa {
+        min-height: 48px;
+        font-size: 15px;
+        padding: 12px 20px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .correccion-input-group {
+        flex-direction: column;
+    }
+
+    .correccion-input-group input {
+        width: 100%;
+        min-height: 46px;
+        font-size: 16px;
+    }
 }
+

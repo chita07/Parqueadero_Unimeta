@@ -30,7 +30,7 @@
     <main class="admin-container">
         <!-- Page Title -->
         <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Resumen general del parqueadero — 18 de Febrero, 2026</p>
+        <p class="page-subtitle" id="admin-date-subtitle">Cargando fecha del sistema...</p>
 
         <!-- Stats Cards -->
         <div class="stats-grid">
@@ -265,14 +265,9 @@
             <div class="panel-header">
                 <h2 class="section-title">Distribución de Suscripciones</h2>
             </div>
-            <div class="chart-container">
-                <div class="pie-chart-wrapper">
-                    <div class="pie-chart">
-                        <div class="pie-center">
-                            <span class="pie-total-number" id="chart-total">0</span>
-                            <span class="pie-total-label">Total</span>
-                        </div>
-                    </div>
+            <div class="chart-container" style="display:flex;align-items:center;justify-content:center;gap:35px;flex-wrap:wrap;padding:20px 0;">
+                <div class="pie-chart-wrapper" style="width:190px;height:190px;position:relative;display:flex;align-items:center;justify-content:center;">
+                    <canvas id="distribucionChart" width="190" height="190"></canvas>
                 </div>
                 <div class="chart-legend">
                     <div class="legend-item">
@@ -429,7 +424,11 @@
                     </div>
                 </div>
 
-                <div class="panel-body" style="padding:0;">
+                <div style="padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap; background: #fafafa; border-bottom: 1px solid #eee;">
+                    <input type="text" id="buscar-usuarios" placeholder="🔍 Buscar por nombre, cédula o correo..." class="form-input-clean" style="max-width: 320px; font-size: 13px;" oninput="filtrarUsuariosAdmin(this.value)">
+                    <span id="usuarios-count-badge" style="font-size: 13px; color: #666; font-weight: 600;">Cargando usuarios...</span>
+                </div>
+                <div class="panel-body" style="padding:0; overflow-x: auto;">
                     <table class="data-table">
                         <thead>
                             <tr>
@@ -440,6 +439,7 @@
                                 <th>Teléfono</th>
                                 <th>Rol</th>
                                 <th>Estado</th>
+                                <th style="text-align:center;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-usuarios">
@@ -625,6 +625,13 @@
                         <tr><td colspan="7" style="text-align:center;padding:2rem;color:#888;">Cargando registros ANPR...</td></tr>
                     </tbody>
                 </table>
+                <div class="table-pagination" style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-top:1px solid #eee;background:#fafafa;">
+                    <span id="anpr-paginacion-info" style="font-size:13px;color:#64748b;font-weight:600;">Página 1</span>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn-unimeta btn-unimeta-secondary" id="btn-anpr-prev" onclick="cambiarPaginaANPR(-1)" style="padding:5px 12px;font-size:12px;">← Anterior</button>
+                        <button class="btn-unimeta btn-unimeta-secondary" id="btn-anpr-next" onclick="cambiarPaginaANPR(1)" style="padding:5px 12px;font-size:12px;">Siguiente →</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -751,8 +758,9 @@
         <p>&copy; 2026 Parqueadero Unimeta — Panel Administrativo. Todos los derechos reservados.</p>
     </footer>
 
-    <!-- Supabase -->
+    <!-- Supabase & Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="db.js"></script>
     <script src="admin.js"></script>
 </body>

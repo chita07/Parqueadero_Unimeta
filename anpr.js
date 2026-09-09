@@ -879,10 +879,12 @@ async function procesarPlaca() {
             const formatoDisplay = placaFinal.slice(0, 3) + ' · ' + placaFinal.slice(3);
             document.getElementById('placa-code-text').textContent = formatoDisplay;
             document.getElementById('placa-corregida').value = placaFinal;
+            buscarSugerenciaInteligente(placaFinal);
         } else {
             document.getElementById('placa-code-text').textContent = 'NO DETECTADA';
             document.getElementById('placa-corregida').value = '';
             document.getElementById('placa-corregida').placeholder = 'Ingresa placa manualmente...';
+            ocultarSugerenciaCorreccion();
         }
 
         resArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -995,6 +997,9 @@ async function verificarPago() {
             </div>
         `;
     } else {
+        // Alerta sonora para vehículo no autorizado o sin pago
+        reproducirAlertaSonoraSinPago();
+
         verifCard.innerHTML = `
             <div class="verif-header">
                 <span class="verif-icon">⚠️</span>
@@ -1020,20 +1025,31 @@ async function verificarPago() {
     cargarHistorial();
 }
 
-// ===== 10. Cargar Historial de Escaneos Recientes =====
+// ===== 10. Cargar Historial de Escaneos Recientes con Paginación =====
+let paginaActualHistorial = 1;
+const LIMITE_HISTORIAL = 10;
+let totalHistorialANPR = 0;
+
 async function cargarHistorial() {
     const lista = document.getElementById('historial-lista');
     if (!lista) return;
 
     try {
+        const { count } = await db.from('alertas_acceso').select('*', { count: 'exact', head: true });
+        totalHistorialANPR = count || 0;
+
+        const desde = (paginaActualHistorial - 1) * LIMITE_HISTORIAL;
+        const hasta = desde + LIMITE_HISTORIAL - 1;
+
         const { data, error } = await db
             .from('alertas_acceso')
             .select('*')
             .order('fecha_hora', { ascending: false })
-            .limit(10);
+            .range(desde, hasta);
 
         if (error || !data || data.length === 0) {
-            lista.innerHTML = '<p class="placeholder">No hay escaneos registrados aún.</p>';
+            lista.innerHTML = '<p class="placeholder" style="text-align:center;padding:1.5rem;color:#888;">No hay escaneos registrados aún.</p>';
+            actualizarPaginacionHistorial();
             return;
         }
 
@@ -1062,9 +1078,32 @@ async function cargarHistorial() {
                 </div>
             `;
         }).join('');
+
+        actualizarPaginacionHistorial();
     } catch (e) {
         console.warn('Error cargando historial:', e);
         lista.innerHTML = '<p class="placeholder">No se pudo cargar el historial.</p>';
+    }
+}
+
+function actualizarPaginacionHistorial() {
+    const info = document.getElementById('hist-paginacion-info');
+    const btnPrev = document.getElementById('btn-hist-prev');
+    const btnNext = document.getElementById('btn-hist-next');
+    if (!info) return;
+
+    const totalPaginas = Math.ceil(totalHistorialANPR / LIMITE_HISTORIAL) || 1;
+    info.textContent = `Página ${paginaActualHistorial} de ${totalPaginas} (${totalHistorialANPR} registros)`;
+    if (btnPrev) btnPrev.disabled = paginaActualHistorial <= 1;
+    if (btnNext) btnNext.disabled = paginaActualHistorial >= totalPaginas;
+}
+
+function cambiarPaginaHistorial(delta) {
+    const totalPaginas = Math.ceil(totalHistorialANPR / LIMITE_HISTORIAL) || 1;
+    const nueva = paginaActualHistorial + delta;
+    if (nueva >= 1 && nueva <= totalPaginas) {
+        paginaActualHistorial = nueva;
+        cargarHistorial();
     }
 }
 
@@ -1073,11 +1112,131 @@ function reiniciarCaptura() {
     imagenCapturada = null;
     placaDetectada = '';
     ocrConfianza = 0;
+    ocultarSugerenciaCorreccion();
 
     if (metodoCaptura === 'camara') {
         activarCamara();
     } else {
         activarArchivo();
+    }
+}
+
+// ===== 12. Auto-corrección Inteligente (Levenshtein Distance) =====
+let placaSugeridaActual = '';
+
+function calcularDistanciaLevenshtein(a, b) {
+    if (!a || !b) return (a || b).length;
+    const m = a.length;
+    const n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            dp[i][j] = Math.min(
+                dp[i - 1][j] + 1,       // Eliminación
+                dp[i][j - 1] + 1,       // Inserción
+                dp[i - 1][j - 1] + cost // Sustitución
+            );
+        }
+    }
+    return dp[m][n];
+}
+
+async function buscarSugerenciaInteligente(placaLeida) {
+    const box = document.getElementById('sugerencia-correccion-box');
+    if (!box || !placaLeida) return;
+
+    try {
+        // Consultar placas recientes en pagos
+        const { data: pagos, error } = await db
+            .from('pagos')
+            .select('placa, nombre')
+            .order('fecha_inicio', { ascending: false })
+            .limit(30);
+
+        if (error || !pagos || pagos.length === 0) {
+            ocultarSugerenciaCorreccion();
+            return;
+        }
+
+        const limpiaLeida = placaLeida.replace(/[^A-Z0-9]/g, '');
+        let mejorMatch = null;
+        let mejorDistancia = 999;
+
+        for (const p of pagos) {
+            const limpiaDB = (p.placa || '').replace(/[^A-Z0-9]/g, '');
+            if (limpiaDB === limpiaLeida) {
+                // Es coincidencia exacta, no se requiere sugerencia
+                ocultarSugerenciaCorreccion();
+                return;
+            }
+            const dist = calcularDistanciaLevenshtein(limpiaLeida, limpiaDB);
+            if (dist <= 2 && dist < mejorDistancia) {
+                mejorDistancia = dist;
+                mejorMatch = p;
+            }
+        }
+
+        if (mejorMatch && mejorDistancia <= 2) {
+            placaSugeridaActual = mejorMatch.placa;
+            document.getElementById('sugerencia-placa-txt').textContent = mejorMatch.placa;
+            document.getElementById('sugerencia-nombre-txt').textContent = mejorMatch.nombre || 'Registrado';
+            box.classList.remove('hidden');
+        } else {
+            ocultarSugerenciaCorreccion();
+        }
+    } catch(e) {
+        console.warn('Error buscando sugerencia OCR:', e);
+        ocultarSugerenciaCorreccion();
+    }
+}
+
+function ocultarSugerenciaCorreccion() {
+    const box = document.getElementById('sugerencia-correccion-box');
+    if (box) box.classList.add('hidden');
+    placaSugeridaActual = '';
+}
+
+function aplicarSugerenciaPlaca() {
+    if (!placaSugeridaActual) return;
+    document.getElementById('placa-corregida').value = placaSugeridaActual;
+    const formatoDisplay = placaSugeridaActual.slice(0, 3) + ' · ' + placaSugeridaActual.slice(3);
+    document.getElementById('placa-code-text').textContent = formatoDisplay;
+    ocultarSugerenciaCorreccion();
+}
+
+// ===== 13. Alerta Sonora para Vehículo Sin Pago (Web Audio API) =====
+function reproducirAlertaSonoraSinPago() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+
+        function emitirBeep(freq, delay, dur) {
+            setTimeout(() => {
+                try {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start();
+                    osc.stop(ctx.currentTime + dur);
+                } catch(e) {}
+            }, delay);
+        }
+
+        emitirBeep(520, 0, 0.18);
+        emitirBeep(680, 200, 0.22);
+    } catch(err) {
+        console.warn('No se pudo reproducir alerta de audio:', err);
     }
 }
 
