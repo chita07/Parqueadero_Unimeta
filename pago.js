@@ -423,12 +423,53 @@ function verMiEspacio() {
     location.href = ref ? 'mapa.html?ref=' + encodeURIComponent(ref) : 'mapa.html';
 }
 
-// Auto-select plan desde URL y cargar tarifas
+// Auto-select plan y placa desde URL y cargar tarifas
 document.addEventListener('DOMContentLoaded', async () => {
     await cargarTarifas();
-    const params = new URLSearchParams(window.location.search);
-    const plan   = params.get('plan');
-    const precio = params.get('precio');
-    const nombre = params.get('nombre');
-    if (plan && precio && nombre) seleccionarPlan(plan, parseInt(precio), nombre);
+    const params     = new URLSearchParams(window.location.search);
+    const plan       = params.get('plan');
+    const precio     = params.get('precio');
+    const nombre     = params.get('nombre');
+    const placaParam = (params.get('placa') || params.get('plate') || '').trim().toUpperCase();
+
+    // 1. Si viene plan en la URL, seleccionarlo; si viene placa desde ANPR sin plan, seleccionar 'diario' para desplegar formulario
+    if (plan && precio && nombre) {
+        seleccionarPlan(plan, parseInt(precio), nombre);
+    } else if (placaParam) {
+        const diarioPrecio = tarifasBase['diario'] || 2000;
+        seleccionarPlan('diario', diarioPrecio, 'Diario');
+    }
+
+    // 2. Rellenar automáticamente el campo de la placa proveniente de ANPR
+    if (placaParam) {
+        const inputPlaca = document.getElementById('placa');
+        if (inputPlaca) {
+            inputPlaca.value = placaParam;
+            inputPlaca.style.borderColor = '#2eb85c';
+            inputPlaca.style.backgroundColor = '#f0fff4';
+            inputPlaca.dispatchEvent(new Event('input'));
+        }
+
+        // Consultar si este vehículo ya tiene registros previos en pagos para autocompletar nombre/cédula/teléfono
+        try {
+            const { data: previousUser } = await db
+                .from('pagos')
+                .select('nombre, cedula, telefono')
+                .eq('placa', placaParam)
+                .order('created_at', { ascending: false })
+                .limit(1);
+
+            if (previousUser && previousUser.length > 0) {
+                const u = previousUser[0];
+                const inputNombre   = document.getElementById('nombre');
+                const inputCedula   = document.getElementById('cedula');
+                const inputTelefono = document.getElementById('telefono');
+                if (inputNombre && !inputNombre.value && u.nombre) inputNombre.value = u.nombre;
+                if (inputCedula && !inputCedula.value && u.cedula) inputCedula.value = u.cedula;
+                if (inputTelefono && !inputTelefono.value && u.telefono) inputTelefono.value = u.telefono;
+            }
+        } catch (errUser) {
+            console.warn('No se pudieron precargar datos previos del usuario:', errUser);
+        }
+    }
 });

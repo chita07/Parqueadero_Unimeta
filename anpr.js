@@ -1074,6 +1074,7 @@ async function cargarHistorial() {
                     <div class="hist-right">
                         <span>${hora}</span>
                         <small style="display:block;color:#999;">OCR: ${item.confianza_ocr || '—'}</small>
+                        ${!tienePago ? `<a href="pago.html?placa=${encodeURIComponent(placa)}" class="btn-hist-pago" style="display:inline-block;margin-top:4px;font-size:11px;padding:3px 8px;background:#E30614;color:white;border-radius:6px;text-decoration:none;font-weight:700;">💵 Registrar Pago</a>` : ''}
                     </div>
                 </div>
             `;
