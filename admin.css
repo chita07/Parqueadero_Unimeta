@@ -218,7 +218,7 @@ header {
 
 .admin-parqueadero {
     display: grid;
-    grid-template-columns: 130px 1fr 70px;
+    grid-template-columns: 74px 1fr 70px;
     grid-template-rows: auto auto auto auto auto auto auto;
     gap: 6px;
     max-width: 550px;
@@ -240,12 +240,54 @@ header {
     justify-content: center;
 }
 
-.admin-zona-sup-izq { grid-column: 1; grid-row: 1; }
-.admin-zona-sup-der { grid-column: 2; grid-row: 1; }
-.admin-zona-der { grid-column: 3; grid-row: 1 / 7; flex-direction: column; align-items: center; }
-.admin-zona-izq { grid-column: 1; grid-row: 2; }
-.admin-zona-inf-izq { grid-column: 1; grid-row: 5; }
-.admin-zona-inf-der { grid-column: 2; grid-row: 6; }
+.admin-zona-sup-izq { 
+    grid-column: 1; 
+    grid-row: 1; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 4px; 
+}
+.admin-zona-sup-der { 
+    grid-column: 2; 
+    grid-row: 1; 
+    flex-direction: row; 
+    flex-wrap: nowrap; 
+    justify-content: center; 
+    align-items: flex-start; 
+    align-self: start; 
+}
+.admin-zona-der { 
+    grid-column: 3; 
+    grid-row: 1 / 7; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 4px; 
+}
+.admin-zona-izq { 
+    grid-column: 1; 
+    grid-row: 2; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 4px; 
+}
+.admin-zona-inf-izq { 
+    grid-column: 1; 
+    grid-row: 5; 
+    flex-direction: column; 
+    align-items: center; 
+    gap: 4px; 
+}
+.admin-zona-inf-der { 
+    grid-column: 2; 
+    grid-row: 6; 
+    flex-direction: row; 
+    flex-wrap: nowrap; 
+    justify-content: center; 
+    align-items: center; 
+    justify-self: end; 
+    width: fit-content; 
+    margin-right: 6px; 
+}
 
 .admin-espacio {
     width: 36px;
@@ -291,25 +333,14 @@ header {
     z-index: 2;
 }
 
+.admin-zona-sup-izq .admin-espacio,
+.admin-zona-izq .admin-espacio,
+.admin-zona-inf-izq .admin-espacio,
 .admin-zona-der .admin-espacio {
     width: 54px;
     height: 28px;
     font-size: 10px;
 }
-
-.admin-flecha {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    color: #E30614;
-    opacity: 0.4;
-    font-weight: 700;
-}
-
-.admin-flecha-sup { grid-column: 2; grid-row: 2; }
-.admin-flecha-centro { grid-column: 2; grid-row: 3 / 5; }
-.admin-flecha-inf { grid-column: 2; grid-row: 5; }
 
 .admin-ascensor {
     grid-column: 1;
@@ -348,6 +379,7 @@ header {
     grid-row: 7;
     text-align: center;
     padding: 10px;
+    padding-right: 90px;
     font-size: 13px;
     font-weight: 700;
     color: #E30614;
@@ -600,7 +632,7 @@ header {
     }
 
     .admin-parqueadero {
-        grid-template-columns: 100px 1fr 58px;
+        grid-template-columns: 56px 1fr 54px;
         padding: 8px;
     }
 
@@ -610,9 +642,17 @@ header {
         font-size: 9px;
     }
 
+    .admin-zona-sup-izq .admin-espacio,
+    .admin-zona-izq .admin-espacio,
+    .admin-zona-inf-izq .admin-espacio,
     .admin-zona-der .admin-espacio {
-        width: 46px;
+        width: 44px;
         height: 24px;
+        font-size: 9px;
+    }
+
+    .admin-entrada {
+        padding-right: 50px;
     }
 
     .mapa-admin-wrapper {
