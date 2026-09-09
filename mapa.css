@@ -243,76 +243,31 @@ nav {
 
 /* Zone grid positioning */
 .zona-sup-izq { grid-column: 1; grid-row: 1; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; }
-.zona-sup-der { grid-column: 2; grid-row: 1; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; }
+.zona-sup-der { 
+    grid-column: 2; 
+    grid-row: 1; 
+    flex-direction: row; 
+    flex-wrap: nowrap; 
+    justify-content: center; 
+    align-items: flex-start; 
+    align-self: start; 
+    padding-top: 10px; 
+    padding-bottom: 6px; 
+}
 .zona-der     { grid-column: 3; grid-row: 1 / 8; flex-direction: column; align-items: center; }
 .zona-izq     { grid-column: 1; grid-row: 2; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-end; }
 .zona-inf-izq { grid-column: 1; grid-row: 5; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
-.zona-inf-der { grid-column: 2; grid-row: 6; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
-
-/* ===== FLECHAS DE TRÁFICO — SVG Animadas ===== */
-.flecha {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    gap: 4px;
-}
-
-.flecha-sup        { grid-column: 2; grid-row: 2; padding: 4px 8px; }
-.flecha-centro-sube{ grid-column: 2; grid-row: 3 / 5; padding: 8px 4px; }
-.flecha-inf        { grid-column: 2; grid-row: 5; padding: 4px 8px; }
-
-/* SVG horizontal arrow fills the width */
-.flecha-svg {
-    width: 100%;
-    height: 28px;
-    display: block;
-    overflow: visible;
-}
-
-/* SVG vertical arrow fills the height */
-.flecha-svg-v {
-    width: 28px;
-    height: 100%;
-    min-height: 60px;
-    display: block;
-    overflow: visible;
-}
-
-/* Animated road stripe — horizontal */
-.road-stripe {
-    stroke-dasharray: 10 6;
-    stroke-dashoffset: 0;
-    animation: flowStripeH 0.9s linear infinite;
-}
-
-/* Animated road stripe — vertical */
-.road-stripe-v {
-    stroke-dasharray: 10 6;
-    stroke-dashoffset: 0;
-    animation: flowStripeV 0.9s linear infinite;
-}
-
-@keyframes flowStripeH {
-    from { stroke-dashoffset: 0; }
-    to   { stroke-dashoffset: -32; }
-}
-
-@keyframes flowStripeV {
-    from { stroke-dashoffset: 0; }
-    to   { stroke-dashoffset: -32; }
-}
-
-/* ENTRADA / SALIDA label under the arrow */
-.flecha-label {
-    font-size: 7.5px;
-    font-weight: 800;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-    color: rgba(255, 205, 28, 0.55);
-    white-space: nowrap;
-    font-family: 'Inter', sans-serif;
+.zona-inf-der { 
+    grid-column: 2; 
+    grid-row: 6; 
+    flex-direction: row; 
+    flex-wrap: nowrap; 
+    justify-content: center; 
+    align-items: center; 
+    justify-self: end; 
+    width: fit-content; 
+    padding: 8px 10px 6px 10px; 
+    margin-right: 6px; 
 }
 
 /* ===== ASCENSOR — Metálico 3D ===== */
