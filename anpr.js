@@ -366,11 +366,11 @@ function limpiarBordesNegros(ctx, width, height) {
     ctx.putImageData(imgData, 0, 0);
 }
 
-function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false) {
+function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false, afilar = false) {
     return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => {
-            const MIN_WIDTH = 550;
+            const MIN_WIDTH = 900;
             let w = img.naturalWidth || img.width;
             let h = img.naturalHeight || img.height;
             if (w < MIN_WIDTH) {
@@ -407,6 +407,23 @@ function preprocesarImagen(dataUrlOrCanvas, usarOtsu = false, invertir = false) 
             for (let i = 0; i < d.length; i += 4) {
                 const stretched = Math.min(255, Math.max(0, ((d[i] - min) / range) * 255));
                 d[i] = d[i + 1] = d[i + 2] = stretched;
+            }
+
+            // Afilado (Sharpen Kernel 3×3) para mejorar bordes de caracteres
+            if (afilar) {
+                const src = new Uint8ClampedArray(d);
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        const i = (y * w + x) * 4;
+                        const val = 5 * src[i]
+                            - src[((y - 1) * w + x) * 4]
+                            - src[((y + 1) * w + x) * 4]
+                            - src[(y * w + x - 1) * 4]
+                            - src[(y * w + x + 1) * 4];
+                        const clamped = Math.min(255, Math.max(0, val));
+                        d[i] = d[i + 1] = d[i + 2] = clamped;
+                    }
+                }
             }
 
             if (usarOtsu) {
@@ -487,10 +504,10 @@ function extraerPlacaColombiana(textoOCR) {
 
     // Eliminar palabras institucionales
     raw = raw.replace(/COLOMBIA/g, '')
-             .replace(/VILLAVICENCIO/g, '')
-             .replace(/BOGOTA/g, '')
-             .replace(/MEDELLIN/g, '')
-             .replace(/CALI/g, '');
+        .replace(/VILLAVICENCIO/g, '')
+        .replace(/BOGOTA/g, '')
+        .replace(/MEDELLIN/g, '')
+        .replace(/CALI/g, '');
 
     // 1. Extraer tokens alfanuméricos
     const tokens = (raw.match(/[A-Z0-9]+/g) || []).filter(t => t.length > 0);
@@ -513,7 +530,7 @@ function extraerPlacaColombiana(textoOCR) {
             const c = str[pos];
             if (pos < 3) {
                 // Primeros 3 caracteres deben ser letras
-                const lMap = { 
+                const lMap = {
                     '0': 'O', '1': 'I', '5': 'S', '8': 'B', '2': 'Z', '6': 'G', '7': 'T', '4': 'A'
                 };
                 let mapped = lMap[c] || c;
@@ -593,8 +610,8 @@ function extraerPlacaColombiana(textoOCR) {
 function esPlacaValida(placa) {
     if (!placa || placa.length < 5 || placa.length > 6) return false;
     return /^[A-Z]{3}[0-9]{2}$/.test(placa) ||
-           /^[A-Z]{3}[0-9]{2}[A-Z]$/.test(placa) ||
-           /^[A-Z]{3}[0-9]{3}$/.test(placa);
+        /^[A-Z]{3}[0-9]{2}[A-Z]$/.test(placa) ||
+        /^[A-Z]{3}[0-9]{3}$/.test(placa);
 }
 
 // ===== 7B. Votación por Consenso de Pases (Criterio: Conteo de Pases > Confianza) =====
@@ -637,7 +654,7 @@ function votarConsenso(resultadosTorneo) {
         let mejorConf = -1;
         for (const c in conteo) {
             const gana = conteo[c] > mejorConteo ||
-                         (conteo[c] === mejorConteo && pesoConf[c] > mejorConf);
+                (conteo[c] === mejorConteo && pesoConf[c] > mejorConf);
             if (gana) {
                 mejorConteo = conteo[c];
                 mejorConf = pesoConf[c];
@@ -677,27 +694,27 @@ async function procesarPlaca() {
     try {
         let canvasParaPreprocesar = imagenCapturada;
 
-        // Detección de región amarilla (solo para imágenes de archivo — para cámara ya se recortó el ROI)
-        if (metodoCaptura === 'archivo') {
-            const imgTmp = new Image();
-            await new Promise((r) => { imgTmp.onload = r; imgTmp.src = imagenCapturada; });
-            const regionPlaca = detectarRegionPlacaAmarilla(imgTmp);
-            if (regionPlaca) {
-                canvasParaPreprocesar = regionPlaca;
-                console.log('✅ Placa localizada y recortada (zona de caracteres únicamente).');
-            }
+        // Detección de región amarilla (localizar y recortar la zona de caracteres de la placa)
+        const imgTmp = new Image();
+        await new Promise((r) => { imgTmp.onload = r; imgTmp.src = imagenCapturada; });
+        const regionPlaca = detectarRegionPlacaAmarilla(imgTmp);
+        if (regionPlaca) {
+            canvasParaPreprocesar = regionPlaca;
+            console.log('✅ Placa localizada y recortada (zona de caracteres únicamente).');
         }
 
-        // Preparar las 4 variantes de imagen para el torneo
-        const imgContraste  = await preprocesarImagen(canvasParaPreprocesar, false, false);
-        const imgOtsu       = await preprocesarImagen(canvasParaPreprocesar, true,  false);
-        const imgOtsuInvert = await preprocesarImagen(canvasParaPreprocesar, true,  true);
+        // Preparar las variantes de imagen para el torneo OCR (7 pases)
+        const imgContraste = await preprocesarImagen(canvasParaPreprocesar, false, false);
+        const imgOtsu = await preprocesarImagen(canvasParaPreprocesar, true, false);
+        const imgOtsuInvert = await preprocesarImagen(canvasParaPreprocesar, true, true);
+        const imgSharpContr = await preprocesarImagen(canvasParaPreprocesar, false, false, true);
+        const imgSharpOtsu = await preprocesarImagen(canvasParaPreprocesar, true, false, true);
 
         // Mostrar miniaturas en el panel de depuración visual (FASE 1)
         mostrarDebugVisual(canvasParaPreprocesar, imgContraste, imgOtsu, imgOtsuInvert);
 
-        document.getElementById('ocr-progress').style.width = '25%';
-        document.getElementById('ocr-progress-pct').textContent = '25%';
+        document.getElementById('ocr-progress').style.width = '15%';
+        document.getElementById('ocr-progress-pct').textContent = '15%';
 
         // Instanciar Worker con modelo LSTM de alta precisión (tessdata_best)
         const worker = await Tesseract.createWorker('eng', 1, {
@@ -711,10 +728,13 @@ async function procesarPlaca() {
         const WHITELIST = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 
         const pases = [
-            { img: imgContraste,  psm: '7',  label: 'PSM7-contraste'  },
-            { img: imgContraste,  psm: '8',  label: 'PSM8-contraste'  },
-            { img: imgOtsu,       psm: '6',  label: 'PSM6-otsu'       },
-            { img: imgOtsuInvert, psm: '13', label: 'PSM13-inv'       },
+            { img: imgContraste, psm: '7', label: 'PSM7-contraste' },
+            { img: imgContraste, psm: '8', label: 'PSM8-contraste' },
+            { img: imgSharpContr, psm: '7', label: 'PSM7-sharp' },
+            { img: imgOtsu, psm: '6', label: 'PSM6-otsu' },
+            { img: imgOtsu, psm: '7', label: 'PSM7-otsu' },
+            { img: imgSharpOtsu, psm: '7', label: 'PSM7-sharp-otsu' },
+            { img: imgOtsuInvert, psm: '13', label: 'PSM13-inv' },
         ];
 
         const resultadosTorneo = [];
@@ -729,7 +749,7 @@ async function procesarPlaca() {
             });
             const res = await worker.recognize(pase.img);
             const texto = (res.data.text || '').trim();
-            const conf  = Math.round(res.data.confidence || 0);
+            const conf = Math.round(res.data.confidence || 0);
 
             console.log(`🔍 [${pase.label}] conf=${conf}% → "${texto.replace(/\n/g, ' ')}"`);
 
@@ -773,7 +793,15 @@ async function procesarPlaca() {
         const placaConsenso = votarConsenso(resultadosTorneo);
         const ganador = resultadosTorneo.find(r => r.placa === placaConsenso) || resultadosTorneo[0] || null;
 
-        ocrConfianza = ganador ? ganador.conf : mejorConfianza;
+        // Confianza basada en consenso: cuántos pases coinciden con la placa ganadora
+        if (placaConsenso && resultadosTorneo.length > 0) {
+            const acuerdos = resultadosTorneo.filter(r => r.placa === placaConsenso).length;
+            const confConsenso = Math.round((acuerdos / pases.length) * 100);
+            const confRawMejor = Math.max(...resultadosTorneo.filter(r => r.placa === placaConsenso).map(r => r.conf));
+            ocrConfianza = Math.max(confConsenso, confRawMejor);
+        } else {
+            ocrConfianza = mejorConfianza;
+        }
         document.getElementById('ocr-confianza-valor').textContent = ocrConfianza + '%';
 
         // Mostrar todos los textos crudos obtenidos en el torneo
@@ -869,13 +897,13 @@ async function verificarPago() {
         await db.from('alertas_acceso').insert([{
             placa_detectada: placaDetectada || placaFinal,
             placa_corregida: inputCorregido || null,
-            tiene_pago:      tienePago,
-            pago_id:         pago ? pago.id : null,
-            nombre_usuario:  pago ? pago.nombre : null,
-            tipo_servicio:   pago ? pago.tipo_servicio : null,
-            metodo_captura:  metodoCaptura,
-            confianza_ocr:   ocrConfianza + '%',
-            atendida:        false
+            tiene_pago: tienePago,
+            pago_id: pago ? pago.id : null,
+            nombre_usuario: pago ? pago.nombre : null,
+            tipo_servicio: pago ? pago.tipo_servicio : null,
+            metodo_captura: metodoCaptura,
+            confianza_ocr: ocrConfianza + '%',
+            atendida: false
         }]);
 
         // Notificar a otras pestañas (panel admin) en tiempo real

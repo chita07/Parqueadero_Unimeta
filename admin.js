@@ -49,6 +49,22 @@ async function cargarRegistros() {
     mostrarRegistros(data || []);
     actualizarEstadisticas(data || []);
 }
+
+async function registrarEntradaAdminNueva() {
+    const placa = document.getElementById('reg-placa').value.trim().toUpperCase().replace(/[- ]/g, '');
+    const nombre = document.getElementById('reg-nombre').value.trim();
+    const cedula = document.getElementById('reg-cedula').value.trim();
+    const telefono = document.getElementById('reg-telefono').value.trim();
+    const correo = document.getElementById('reg-correo')?.value.trim() || '';
+    const plan = document.getElementById('reg-plan').value;
+    if (!placa || !nombre || !cedula || !correo) { await uiAlert('Datos incompletos', 'Placa, nombre, cédula y correo son obligatorios.'); return; }
+    try {
+        const result = await parkingDB.createEntry({ placa, nombre, cedula, telefono, correo, tipo_usuario: 'particular', plan });
+        document.getElementById('reg-ref').textContent = `${result.entry.ticket_entrada} — Espacio #${result.entry.espacio_numero}`;
+        document.getElementById('registro-exito').classList.remove('hidden');
+        await cargarRegistros(); await cargarMapaAdmin();
+    } catch (error) { await uiAlert('No se pudo registrar', error.message, '❌'); }
+}
 // Mostrar registros en la tabla
 function mostrarRegistros(registros) {
     const tbody = document.getElementById('tabla-registros');
@@ -228,6 +244,8 @@ function calcFechaFin(inicio, tipo) {
 }
 
 document.getElementById('btn-registrar-manual').addEventListener('click', async function () {
+    await registrarEntradaAdminNueva();
+    return;
     const placa = document.getElementById('reg-placa').value.trim();
     const nombre = document.getElementById('reg-nombre').value.trim();
     const cedula = document.getElementById('reg-cedula').value.trim();
@@ -312,11 +330,14 @@ document.getElementById('btn-registrar-manual').addEventListener('click', async 
 });
 
 // Cargar al iniciar
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await parkingDB.ready();
+    if (parkingDB.isOnline()) await parkingDB.syncNow();
     cargarRegistros();
     cargarMapaAdmin();
     cargarTarifasAdmin();
     cargarUsuariosAdmin();
+    cargarTrabajadoresAdmin();
     cargarCesiones();
     cargarAlertasANPR();
 
@@ -1061,4 +1082,128 @@ function exportarReporteCSV() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+// ===== Reportes y operación nueva por entrada/salida =====
+let datosTrabajadores = [];
+
+function fechaTextoNueva(value) { return value ? new Date(value).toLocaleString('es-CO') : '—'; }
+function reporteRowsNuevo(records) {
+    return records.map(r => [r.ticket_entrada || '', r.ticket_salida || '', r.placa || '', r.nombre || '', r.cedula || '', r.tipo_usuario || '', r.area_trabajo || '', r.plan || '', r.entrada_at || '', r.salida_at || '', r.horas_uso ?? '', r.valor_cobrado ?? 0, r.estado_pago || '']);
+}
+function excelHtmlNuevo(records, title) {
+    const headers = ['Ticket entrada', 'Ticket salida', 'Placa', 'Nombre', 'Cédula', 'Tipo usuario', 'Área', 'Plan', 'Entrada', 'Salida', 'Horas', 'Valor', 'Estado'];
+    return `<html><meta charset="utf-8"><table><caption>${title}</caption><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${reporteRowsNuevo(records).map(row => `<tr>${row.map(c => `<td>${String(c).replace(/[<>&]/g, '')}</td>`).join('')}</tr>`).join('')}</table></html>`;
+}
+function descargarArchivoNuevo(content, filename, type) {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([content], { type })); link.download = filename;
+    document.body.appendChild(link); link.click(); link.remove();
+}
+
+async function generarReporteAdmin() {
+    const desde = document.getElementById('rep-fecha-desde').value;
+    const hasta = document.getElementById('rep-fecha-hasta').value;
+    const filtro = document.getElementById('rep-filtro-tarifa').value;
+    datosUltimoReporte = (await parkingDB.records(desde, hasta)).filter(r => !filtro || r.plan === filtro);
+    const cobrados = datosUltimoReporte.filter(r => Number(r.valor_cobrado) > 0);
+    const total = cobrados.reduce((sum, r) => sum + Number(r.valor_cobrado || 0), 0);
+    document.getElementById('rep-total-transacciones').textContent = cobrados.length;
+    document.getElementById('rep-total-recaudado').textContent = '$' + total.toLocaleString('es-CO');
+    document.getElementById('rep-promedio-ticket').textContent = '$' + (cobrados.length ? Math.round(total / cobrados.length) : 0).toLocaleString('es-CO');
+    document.getElementById('tabla-reporte-body').innerHTML = datosUltimoReporte.length
+        ? datosUltimoReporte.map(r => `<tr><td><strong>${r.ticket_salida || r.ticket_entrada}</strong></td><td>${r.placa}</td><td>${r.nombre}</td><td>${r.plan}</td><td>${r.estado_pago}</td><td>${fechaTextoNueva(r.entrada_at)}</td><td>${fechaTextoNueva(r.salida_at)}</td><td>$${Number(r.valor_cobrado || 0).toLocaleString('es-CO')}</td></tr>`).join('')
+        : '<tr><td colspan="8">No se encontraron registros.</td></tr>';
+    document.getElementById('reporte-resultado-box').style.display = 'block';
+}
+
+function exportarReporteExcel() {
+    if (!datosUltimoReporte.length) { uiAlert('Atención', 'Primero genera un reporte con datos.'); return; }
+    descargarArchivoNuevo(excelHtmlNuevo(datosUltimoReporte, 'Reporte Parqueadero Unimeta'), `Reporte_Parqueadero_${new Date().toISOString().slice(0, 10)}.xls`, 'application/vnd.ms-excel;charset=utf-8');
+}
+function exportarReportePDF() {
+    if (!datosUltimoReporte.length) { uiAlert('Atención', 'Primero genera un reporte con datos.'); return; }
+    const win = window.open('', '_blank'); if (!win) return;
+    win.document.write(`<html><head><title>Reporte Parqueadero</title><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px;font-size:10px}</style></head><body><h2>Reporte Parqueadero Unimeta</h2>${excelHtmlNuevo(datosUltimoReporte, '').replace(/<html>|<\/html>|<meta[^>]+>/g, '')}<script>window.print();</script></body></html>`);
+    win.document.close();
+}
+
+async function cargarTrabajadoresAdmin() {
+    if (!window.parkingDB) return;
+    const workers = await parkingDB.all('trabajadores');
+    const el = document.getElementById('trabajadores-resultado'); if (!el) return;
+    el.innerHTML = `<table class="data-table"><thead><tr><th>Nombre</th><th>Cédula</th><th>Código</th><th>Área</th><th>Cargo</th><th>Placa</th><th>Estado</th></tr></thead><tbody>${workers.map(w => `<tr><td>${w.nombre}</td><td>${w.cedula}</td><td>${w.codigo_laboral || ''}</td><td>${w.area_trabajo}</td><td>${w.cargo || ''}</td><td>${w.placa_autorizada || ''}</td><td>${w.activo === false ? 'Inactivo' : 'Activo'}</td></tr>`).join('')}</tbody></table>`;
+}
+async function guardarTrabajadorAdmin() {
+    const worker = { nombre: document.getElementById('trab-nombre').value.trim(), cedula: document.getElementById('trab-cedula').value.trim(), codigo_laboral: document.getElementById('trab-codigo').value.trim(), area_trabajo: document.getElementById('trab-area').value.trim(), cargo: document.getElementById('trab-cargo').value.trim(), placa_autorizada: document.getElementById('trab-placa').value.trim().toUpperCase() };
+    if (!worker.nombre || !worker.cedula || !worker.area_trabajo) { await uiAlert('Datos incompletos', 'Nombre, cédula y área son obligatorios.'); return; }
+    await parkingDB.saveWorker(worker); await cargarTrabajadoresAdmin();
+    await uiAlert('Guardado', 'Trabajador autorizado localmente y pendiente de sincronización si no hay internet.', '✅');
+}
+async function generarReporteTrabajadores() {
+    datosTrabajadores = await parkingDB.workerRecords(document.getElementById('rep-fecha-desde').value, document.getElementById('rep-fecha-hasta').value);
+    document.getElementById('trabajadores-resultado').insertAdjacentHTML('beforeend', `<p><b>${datosTrabajadores.length}</b> movimientos exentos encontrados.</p>`);
+}
+function exportarTrabajadoresExcel() {
+    if (!datosTrabajadores.length) { generarReporteTrabajadores().then(exportarTrabajadoresExcel); return; }
+    descargarArchivoNuevo(excelHtmlNuevo(datosTrabajadores, 'Trabajadores exentos'), `Reporte_Trabajadores_Exentos_${new Date().toISOString().slice(0, 10)}.xls`, 'application/vnd.ms-excel;charset=utf-8');
+}
+function exportarTrabajadoresPDF() {
+    if (!datosTrabajadores.length) { generarReporteTrabajadores().then(exportarTrabajadoresPDF); return; }
+    const win = window.open('', '_blank'); if (!win) return;
+    win.document.write(`<html><head><title>Trabajadores exentos</title><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px;font-size:10px}</style></head><body><h2>Trabajadores exentos</h2>${excelHtmlNuevo(datosTrabajadores, '').replace(/<html>|<\/html>|<meta[^>]+>/g, '')}<script>window.print();</script></body></html>`); win.document.close();
+}
+
+async function cargarTarifasAdmin() {
+    const tariffs = await parkingDB.all('tarifas');
+    tariffs.forEach(t => { const el = document.getElementById(`cfg-tarifa-${t.tipo_servicio}`); if (el) el.value = t.precio; if (precios[t.tipo_servicio] !== undefined) precios[t.tipo_servicio] = Number(t.precio); });
+}
+async function guardarTarifasAdmin() {
+    const diario = Number(document.getElementById('cfg-tarifa-diario')?.value || 2000);
+    const semanal = Number(document.getElementById('cfg-tarifa-semanal')?.value || 10000);
+    const mensual = Number(document.getElementById('cfg-tarifa-mensual')?.value || 45000);
+    for (const [tipo_servicio, precio] of Object.entries({ diario, semanal, mensual })) await parkingDB.save('tarifas', { id: tipo_servicio, tipo_servicio, nombre_display: tipo_servicio, precio, activo: true });
+    await uiAlert('Tarifas guardadas', 'La tarifa mínima de salida es la tarifa diaria.', '✅');
+}
+
+async function cargarRegistros() {
+    const records = await parkingDB.records();
+    const tbody = document.getElementById('tabla-registros');
+    if (!tbody) return;
+    tbody.innerHTML = records.length ? records.slice(0, 100).map((r, i) => `<tr><td>${i + 1}</td><td>${r.placa}</td><td>${r.nombre}</td><td>${r.plan}</td><td>${fechaTextoNueva(r.entrada_at)}</td><td>${r.salida_at ? 'Cerrada' : 'Abierta'}</td><td>${r.estado_pago}</td><td>$${Number(r.valor_cobrado || 0).toLocaleString('es-CO')}</td><td>${r.ticket_salida || r.ticket_entrada}</td></tr>`).join('') : '<tr><td colspan="9">No hay registros locales.</td></tr>';
+    document.getElementById('stat-motos').textContent = records.length;
+    document.getElementById('stat-ingresos').textContent = '$' + records.reduce((sum, r) => sum + Number(r.valor_cobrado || 0), 0).toLocaleString('es-CO');
+    document.getElementById('stat-activas').textContent = records.filter(r => !r.salida_at).length;
+}
+
+async function cargarMapaAdmin() {
+    const records = await parkingDB.all('estancias');
+    mapaAdmin = {};
+    records.filter(r => !r.salida_at).forEach(r => { mapaAdmin[r.espacio_numero] = { ...r, auto_liberar_a: null }; });
+    if (typeof renderizarMapaAdmin === 'function') renderizarMapaAdmin();
+    if (typeof actualizarContadorAdmin === 'function') actualizarContadorAdmin();
+}
+
+function abrirModalEspacio(numero, checkin) {
+    espacioSeleccionado = checkin ? { ...checkin, _numero: numero } : { _numero: numero };
+    document.getElementById('modal-num').textContent = numero;
+    document.getElementById('modal-asignar').classList.add('hidden');
+    document.getElementById('modal-usuario').textContent = checkin?.nombre || 'Libre';
+    document.getElementById('modal-placa').textContent = checkin?.placa || '—';
+    document.getElementById('modal-cedula').textContent = checkin?.cedula || '—';
+    document.getElementById('modal-telefono').textContent = checkin?.telefono || '—';
+    document.getElementById('modal-plan-tipo').textContent = checkin?.exento_cobro ? 'Trabajador exento' : (checkin?.plan || '—');
+    document.getElementById('modal-vence').textContent = checkin ? fechaTextoNueva(checkin.entrada_at) : '—';
+    document.getElementById('modal-ref').textContent = checkin?.ticket_entrada || '—';
+    document.getElementById('modal-estado').textContent = checkin ? 'Ocupado' : 'Libre';
+    document.getElementById('btn-liberar').classList.toggle('hidden', !checkin);
+    document.getElementById('modal-espacio-overlay').classList.remove('hidden');
+}
+
+async function liberarEspacio() {
+    if (!espacioSeleccionado?.id) return;
+    if (!(await uiConfirm('Registrar salida', 'Se cerrará la estancia y se calculará el cobro diario.', '🚪'))) return;
+    const method = prompt('Método de pago', 'efectivo') || 'efectivo';
+    try { const result = await parkingDB.closeEntry(espacioSeleccionado.id, method); await uiAlert('Salida registrada', `Ticket ${result.ticket}. Total: $${result.charge.toLocaleString('es-CO')}`, '✅'); cerrarModal(); await cargarMapaAdmin(); await cargarRegistros(); }
+    catch (error) { await uiAlert('Error', error.message, '❌'); }
 }

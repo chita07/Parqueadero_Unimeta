@@ -1,254 +1,180 @@
-let planSeleccionado = null;
-let precioSeleccionado = 0;
-let nombrePlan = '';
-let precioHoraBase = 1500;
-let tarifasBase = { hora: 1500, diario: 2000, semanal: 10000, mensual: 45000 };
+let planSeleccionado = 'diario';
+let nombrePlan = 'Diario';
+let ultimaEntrada = null;
+let registroRapido = false;
+let lookupTimer = null;
 
-// Jornadas: horarios fijos
-const JORNADAS = {
-    diurna:   { label: '☀️ Diurna (6 AM – 1 PM)',   inicio: 6,  fin: 13 },
-    nocturna: { label: '🌙 Nocturna (6 PM – 10 PM)', inicio: 18, fin: 22 }
-};
-
-// ===== Custom UI Dialogs =====
 function uiAlert(titulo, mensaje, icono = '⚠️') {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
+        const overlay = document.getElementById('custom-dialog-overlay');
+        if (!overlay) { window.alert(`${titulo}\n\n${mensaje}`); resolve(); return; }
         document.getElementById('custom-dialog-title').textContent = titulo;
         document.getElementById('custom-dialog-msg').textContent = mensaje;
         document.getElementById('custom-dialog-icon').textContent = icono;
-        
         const actions = document.getElementById('custom-dialog-actions');
         actions.innerHTML = '<button class="custom-dialog-btn custom-dialog-btn-primary" id="btn-dialog-ok">Aceptar</button>';
-        
-        document.getElementById('custom-dialog-overlay').classList.remove('hidden');
-        
-        document.getElementById('btn-dialog-ok').onclick = () => {
-            document.getElementById('custom-dialog-overlay').classList.add('hidden');
-            resolve();
-        };
+        overlay.classList.remove('hidden');
+        document.getElementById('btn-dialog-ok').onclick = () => { overlay.classList.add('hidden'); resolve(); };
     });
 }
 
-// Cargar tarifas dinámicas desde Supabase
-async function cargarTarifas() {
-    try {
-        const { data, error } = await db.from('tarifas').select('*').eq('activo', true);
-        if (!error && data && data.length > 0) {
-            data.forEach(t => {
-                tarifasBase[t.tipo_servicio] = t.precio;
-                const card = document.querySelector(`[data-plan="${t.tipo_servicio}"]`);
-                if (card) {
-                    card.dataset.precio = t.precio;
-                    const priceEl = card.querySelector('.plan-price');
-                    if (priceEl) {
-                        const unit = t.tipo_servicio === 'hora' ? 'hora' : t.tipo_servicio === 'diario' ? 'día' : t.tipo_servicio === 'semanal' ? 'semana' : 'mes';
-                        priceEl.innerHTML = `$${t.precio.toLocaleString('es-CO')} <span>/ ${unit}</span>`;
-                    }
-                }
-            });
-            precioHoraBase = tarifasBase.hora || 1500;
-        }
-    } catch (e) {
-        console.warn('Usando tarifas por defecto:', e);
-    }
-}
-
-// Calcular fecha_fin según tipo de servicio
-function calcularFechaFin(fechaInicio, tipoServicio) {
-    const fin = new Date(fechaInicio);
-    if (tipoServicio === 'hora') {
-        const horas = parseInt(document.getElementById('horas-permanencia')?.value || '2');
-        fin.setHours(fin.getHours() + horas);
-    }
-    else if (tipoServicio === 'diario')   fin.setDate(fin.getDate() + 1);
-    else if (tipoServicio === 'semanal') fin.setDate(fin.getDate() + 7);
-    else if (tipoServicio === 'mensual') fin.setMonth(fin.getMonth() + 1);
-    return fin;
-}
-
 function seleccionarPlan(plan, precio, nombre) {
-    planSeleccionado = plan;
-    const precioBase = tarifasBase[plan] || precio;
-    nombrePlan = nombre;
-
-    const groupHoras = document.getElementById('group-horas');
-    if (plan === 'hora') {
-        groupHoras.classList.remove('hidden');
-        const horas = parseInt(document.getElementById('horas-permanencia').value || '2');
-        precioSeleccionado = precioBase * horas;
-    } else {
-        groupHoras.classList.add('hidden');
-        precioSeleccionado = precioBase;
-    }
-
+    if (plan === 'hora') plan = 'diario';
+    planSeleccionado = ['diario', 'semanal', 'mensual'].includes(plan) ? plan : 'diario';
+    nombrePlan = nombre || (planSeleccionado.charAt(0).toUpperCase() + planSeleccionado.slice(1));
     document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected'));
-    const cardSelected = document.querySelector(`[data-plan="${plan}"]`);
-    if (cardSelected) cardSelected.classList.add('selected');
-
-    document.getElementById('resumen-tipo').textContent = nombre;
-    document.getElementById('resumen-servicio').textContent = 'Moto - Tarifa ' + nombre;
-    document.getElementById('resumen-total').textContent = '$' + precioSeleccionado.toLocaleString('es-CO');
-
+    const card = document.querySelector(`[data-plan="${planSeleccionado}"]`);
+    if (card) card.classList.add('selected');
+    document.getElementById('resumen-tipo').textContent = nombrePlan;
+    document.getElementById('resumen-servicio').textContent = `${nombrePlan} - cobro a la salida`;
+    document.getElementById('resumen-total').textContent = '$0 (entrada)';
+    document.getElementById('step-servicio').classList.add('hidden');
     document.getElementById('step-pago').classList.remove('hidden');
     document.getElementById('step-pago').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function cambiarHoras() {
-    if (planSeleccionado === 'hora') {
-        const horas = parseInt(document.getElementById('horas-permanencia').value || '1');
-        const base = tarifasBase['hora'] || 1500;
-        precioSeleccionado = base * horas;
-        document.getElementById('resumen-total').textContent = '$' + precioSeleccionado.toLocaleString('es-CO');
-    }
+function cambiarTipoUsuario() {
+    const type = document.getElementById('tipo-usuario').value;
+    document.getElementById('group-programa').classList.toggle('hidden', type !== 'estudiante');
+    document.getElementById('group-trabajador').classList.toggle('hidden', type !== 'trabajador_universidad');
 }
 
-document.getElementById('placa').addEventListener('input', function () {
-    this.value = this.value.toUpperCase();
-    document.getElementById('resumen-placa').textContent = this.value || '—';
-});
-
-// ===== Verificar capacidad disponible para esa jornada =====
-const TOTAL_ESPACIOS = 33;
-
-async function contarSuscripcionesJornada(jornada) {
-    const ahora = new Date().toISOString();
-    const { data, error } = await db
-        .from('pagos')
-        .select('id')
-        .eq('jornada', jornada)
-        .gt('fecha_fin', ahora);
-
-    if (error) return 0;
-    return (data || []).length;
+function mostrarAvisoDatosRecuperados(entry) {
+    let notice = document.getElementById('datos-recuperados-aviso');
+    if (!notice) {
+        notice = document.createElement('div');
+        notice.id = 'datos-recuperados-aviso';
+        notice.style.cssText = 'padding:12px;margin:10px 0;border-left:4px solid #15803D;background:#F0FDF4;color:#166534;border-radius:8px;font-weight:600;';
+        document.getElementById('placa').closest('.form-group').after(notice);
+    }
+    notice.textContent = `Datos recuperados para ${entry.nombre}. Solo se solicita nuevamente la placa.`;
+    notice.classList.remove('hidden');
 }
 
-async function confirmarPago() {
-    const placa    = document.getElementById('placa').value.trim();
-    const nombre   = document.getElementById('nombre').value.trim();
-    const cedula   = document.getElementById('cedula').value.trim();
-    const telefono = document.getElementById('telefono').value.trim();
-    const metodo   = document.querySelector('input[name="metodo"]:checked');
-    const jornadaInput = document.querySelector('input[name="jornada"]:checked');
+function alternarCamposRegistroRapido(rapido) {
+    registroRapido = rapido;
+    ['nombre', 'cedula', 'telefono', 'correo', 'tipo-usuario', 'group-programa', 'group-trabajador'].forEach(id => {
+        const element = document.getElementById(id);
+        const group = element?.classList.contains('form-group') ? element : element?.closest('.form-group');
+        if (group) group.classList.toggle('hidden', rapido);
+    });
+}
 
-    if (!placa)   { await uiAlert('Falta Información', 'Por favor ingresa la placa del vehículo.', '⚠️'); return; }
-    if (!nombre)  { await uiAlert('Falta Información', 'Por favor ingresa tu nombre completo.', '⚠️'); return; }
-    if (!cedula)  { await uiAlert('Falta Información', 'Por favor ingresa tu número de cédula.', '⚠️'); return; }
-    if (!metodo)  { await uiAlert('Falta Información', 'Por favor selecciona un método de pago.', '⚠️'); return; }
-    if (!planSeleccionado) { await uiAlert('Falta Información', 'Por favor selecciona un plan primero.', '⚠️'); return; }
+async function buscarDatosPorPlaca() {
+    const value = document.getElementById('placa')?.value.trim().toUpperCase().replace(/[- ]/g, '');
+    if (!value || value.length < 5) return;
+    const entry = await parkingDB.latestByPlate(value);
+    if (!entry) { alternarCamposRegistroRapido(false); return; }
+    document.getElementById('nombre').value = entry.nombre || '';
+    document.getElementById('cedula').value = entry.cedula || '';
+    document.getElementById('telefono').value = entry.telefono || '';
+    document.getElementById('correo').value = entry.correo || '';
+    document.getElementById('tipo-usuario').value = entry.tipo_usuario || 'particular';
+    document.getElementById('programa-academico').value = entry.programa_academico || '';
+    document.getElementById('area-trabajo').value = entry.area_trabajo || '';
+    document.getElementById('cargo').value = entry.cargo || '';
+    cambiarTipoUsuario();
+    alternarCamposRegistroRapido(true);
+    mostrarAvisoDatosRecuperados(entry);
+    const service = (await parkingDB.activeServices(value))[0];
+    if (service && ['diario', 'semanal', 'mensual'].includes(service.tipo_plan)) seleccionarPlan(service.tipo_plan, 0, service.tipo_plan.charAt(0).toUpperCase() + service.tipo_plan.slice(1));
+}
 
-    const jornada = jornadaInput ? jornadaInput.value : 'diurna';
-
-    // Deshabilitar botón
-    const btnConfirmar = document.querySelector('.btn-confirmar');
-    btnConfirmar.disabled = true;
-    btnConfirmar.textContent = 'Verificando cupos...';
-
-    // Verificar que queden cupos en la jornada elegida
-    const totalActivos = await contarSuscripcionesJornada(jornada);
-    if (totalActivos >= TOTAL_ESPACIOS) {
-        await uiAlert('Sin Cupos', `⚠️ No hay cupos disponibles para la jornada ${JORNADAS[jornada].label}.\nPor favor elige otra jornada o intenta más tarde.`, '🚫');
-        btnConfirmar.disabled = false;
-        btnConfirmar.textContent = 'Confirmar Pago';
-        return;
-    }
-
-    btnConfirmar.textContent = 'Procesando...';
-
-    const metodoNombres = { nequi: 'Nequi', daviplata: 'Daviplata', pse: 'PSE', tarjeta: 'Tarjeta de Crédito/Débito' };
-    const ref        = 'PQ-' + Date.now().toString().slice(-8);
-    const fechaInicio = new Date();
-    const fechaFin   = calcularFechaFin(fechaInicio, planSeleccionado);
-    const horasEstimadas = planSeleccionado === 'hora' ? parseInt(document.getElementById('horas-permanencia').value || '2') : null;
-
-    const session = JSON.parse(localStorage.getItem('unimeta_session') || 'null');
-
-    // Datos base del pago (siempre compatibles con la estructura original)
-    const pagoDataBase = {
-        placa:           placa.toUpperCase(),
-        nombre,
-        cedula,
-        telefono,
-        tipo_servicio:   planSeleccionado,
-        precio:          precioSeleccionado,
-        metodo_pago:     metodo.value,
-        referencia:      ref,
-        fecha_inicio:    fechaInicio.toISOString(),
-        fecha_fin:       fechaFin.toISOString(),
-        estado:          'activo',
-        jornada:         jornada,
-        horas_estimadas: horasEstimadas
-    };
-
-    // Intentar primero con columnas de trazabilidad (Obj. 3)
-    // Si falla por columna inexistente, reintentar sin ellas
-    let data, error;
-
-    const pagoDataCompleto = {
-        ...pagoDataBase,
-        usuario_id:          session ? session.id : null,
-        estado_verificacion: 'verificado'
-    };
-
-    ({ data, error } = await db.from('pagos').insert([pagoDataCompleto]).select());
-
-    // Fallback: si el error es por columna no encontrada, reintentar con datos base
-    if (error && (error.message.includes('estado_verificacion') || error.message.includes('usuario_id') || error.message.includes('schema cache'))) {
-        console.warn('Columnas de trazabilidad no disponibles aún. Insertando sin ellas...');
-        ({ data, error } = await db.from('pagos').insert([pagoDataBase]).select());
-    }
-
-    btnConfirmar.disabled = false;
-    btnConfirmar.textContent = 'Confirmar Pago';
-
-    if (error) {
-        await uiAlert('Error del Sistema', 'Error al registrar el pago: ' + error.message, '❌');
-        console.error('Supabase error:', error);
-        return;
-    }
-
-    // Mostrar confirmación
-    const textoPlanDisplay = planSeleccionado === 'hora' ? `${nombrePlan} (${horasEstimadas}h)` : nombrePlan;
-    document.getElementById('conf-plan').textContent   = textoPlanDisplay;
-    document.getElementById('conf-placa').textContent  = placa.toUpperCase();
-    document.getElementById('conf-nombre').textContent = nombre;
-    document.getElementById('conf-total').textContent  = '$' + precioSeleccionado.toLocaleString('es-CO');
-    document.getElementById('conf-metodo').textContent = metodoNombres[metodo.value] || metodo.value;
-    document.getElementById('conf-ref').textContent    = ref;
-    document.getElementById('conf-jornada').textContent = JORNADAS[jornada].label;
-
-    window._pagoRef = ref;
-
-  // Notificar a otras pestañas/ventanas (panel admin) del nuevo pago
-  try {
-    localStorage.setItem('unimeta_nuevo_pago', JSON.stringify({ ref, placa: placa.toUpperCase(), ts: Date.now() }));
-    if (window.BroadcastChannel) {
-      new BroadcastChannel('unimeta_channel').postMessage({ tipo: 'nuevo_pago', ref });
-    }
-  } catch(e) {}
-
+function showEntryTicket(result) {
+    const entry = result.entry;
+    ultimaEntrada = entry;
+    document.getElementById('conf-plan').textContent = entry.plan === 'exento' ? 'Exento - trabajador autorizado' : entry.plan;
+    document.getElementById('conf-placa').textContent = entry.placa;
+    document.getElementById('conf-nombre').textContent = entry.nombre;
+    document.getElementById('conf-total').textContent = '$0 - pendiente de salida';
+    document.getElementById('conf-metodo').textContent = entry.exento_cobro ? 'Exento' : 'Pendiente de salida';
+    document.getElementById('conf-ref').textContent = entry.ticket_entrada;
+    document.getElementById('conf-jornada').textContent = entry.tipo_usuario === 'trabajador_universidad'
+        ? `${entry.area_trabajo || 'Trabajador'}${entry.cargo ? ` - ${entry.cargo}` : ''}`
+        : (entry.es_estudiante ? `Estudiante - ${entry.programa_academico || 'Programa no indicado'}` : 'Particular');
     document.getElementById('step-servicio').classList.add('hidden');
     document.getElementById('step-pago').classList.add('hidden');
     document.getElementById('step-confirmacion').classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+async function confirmarPago() {
+    const btn = document.querySelector('.btn-confirmar');
+    const placa = document.getElementById('placa').value.trim().toUpperCase();
+    const nombre = document.getElementById('nombre').value.trim();
+    const cedula = document.getElementById('cedula').value.trim();
+    const telefono = document.getElementById('telefono').value.trim();
+    const correo = document.getElementById('correo').value.trim();
+    const tipoUsuario = document.getElementById('tipo-usuario').value;
+    const programa = document.getElementById('programa-academico').value.trim();
+    const codigoLaboral = document.getElementById('codigo-laboral').value.trim();
+    const areaTrabajo = document.getElementById('area-trabajo').value.trim();
+    const cargo = document.getElementById('cargo').value.trim();
+
+    if (!placa || !nombre || !cedula || !correo) { await uiAlert('Datos incompletos', 'Placa, nombre, cédula y correo son obligatorios.'); return; }
+    if (!/^[A-Z0-9]{5,7}$/.test(placa.replace(/[- ]/g, ''))) { await uiAlert('Placa inválida', 'Verifica el formato de la placa.'); return; }
+    if (tipoUsuario === 'estudiante' && !programa) { await uiAlert('Programa requerido', 'Indica el programa académico.'); return; }
+    if (tipoUsuario === 'trabajador_universidad' && !codigoLaboral) { await uiAlert('Identificación requerida', 'Ingresa el código laboral.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Guardando entrada...';
+    try {
+        const result = await parkingDB.createEntry({
+            placa: placa.replace(/[- ]/g, ''), nombre, cedula, telefono, correo,
+            tipo_usuario: tipoUsuario, es_estudiante: tipoUsuario === 'estudiante',
+            programa_academico: programa, codigo_laboral: codigoLaboral,
+            area_trabajo: areaTrabajo, cargo, plan: planSeleccionado
+        });
+        showEntryTicket(result);
+    } catch (error) {
+        await uiAlert('No se pudo registrar la entrada', error.message || 'Error inesperado.', '❌');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Generar ticket de entrada';
+    }
+}
+
+async function registrarReingresoPorPlaca() {
+    const input = document.getElementById('placa-recurrente');
+    const placa = input.value.trim().toUpperCase().replace(/[- ]/g, '');
+    if (!placa) { await uiAlert('Placa requerida', 'Ingresa la placa para recuperar tus datos.'); return; }
+    document.getElementById('placa').value = placa;
+    await buscarDatosPorPlaca();
+    if (!registroRapido) { await uiAlert('Placa no encontrada', 'No existe información previa. Completa el registro inicial.'); return; }
+    await confirmarPago();
+}
+
 function cambiarPlan() {
     document.getElementById('step-pago').classList.add('hidden');
-    document.querySelectorAll('.plan-card').forEach(card => card.classList.remove('selected'));
+    document.getElementById('step-servicio').classList.remove('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function verMiEspacio() {
-    const ref = window._pagoRef;
-    location.href = ref ? 'mapa.html?ref=' + encodeURIComponent(ref) : 'mapa.html';
+function imprimirTicketEntrada() {
+    if (!ultimaEntrada) return;
+    const e = ultimaEntrada;
+    const w = window.open('', '_blank', 'width=420,height=650');
+    if (!w) return;
+    w.document.write(`<html><head><title>${e.ticket_entrada}</title><style>body{font-family:Arial;padding:20px;max-width:360px}h2{text-align:center}hr{border:0;border-top:1px solid #aaa}.row{display:flex;justify-content:space-between;margin:8px 0}</style></head><body><h2>PARQUEADERO UNIMETA</h2><p style="text-align:center">TICKET DE ENTRADA</p><hr><div class="row"><b>Ticket</b><span>${e.ticket_entrada}</span></div><div class="row"><b>Placa</b><span>${e.placa}</span></div><div class="row"><b>Usuario</b><span>${e.nombre}</span></div><div class="row"><b>Cédula</b><span>${e.cedula}</span></div><div class="row"><b>Entrada</b><span>${new Date(e.entrada_at).toLocaleString('es-CO')}</span></div><div class="row"><b>Espacio</b><span>#${e.espacio_numero}</span></div><div class="row"><b>Estado</b><span>${e.exento_cobro ? 'EXENTO' : 'Cobro a la salida'}</span></div><hr><p>Conserve este ticket para registrar la salida.</p><script>window.print();</script></body></html>`);
+    w.document.close();
 }
 
-// Auto-select plan desde URL y cargar tarifas
+function verMiEspacio() {
+    const ticket = ultimaEntrada?.ticket_entrada;
+    window.location.href = ticket ? `mapa.html?ticket=${encodeURIComponent(ticket)}` : 'mapa.html';
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
-    await cargarTarifas();
+    await parkingDB.ready();
+    if (parkingDB.isOnline()) await parkingDB.syncNow();
+    cambiarTipoUsuario();
+    document.getElementById('placa').addEventListener('input', () => {
+        clearTimeout(lookupTimer);
+        lookupTimer = setTimeout(buscarDatosPorPlaca, 250);
+    });
     const params = new URLSearchParams(window.location.search);
-    const plan   = params.get('plan');
-    const precio = params.get('precio');
-    const nombre = params.get('nombre');
-    if (plan && precio && nombre) seleccionarPlan(plan, parseInt(precio), nombre);
+    const placa = params.get('placa');
+    if (placa) document.getElementById('placa').value = placa.toUpperCase();
+    const plan = params.get('plan');
+    if (plan && ['diario', 'semanal', 'mensual'].includes(plan)) seleccionarPlan(plan, 0, plan.charAt(0).toUpperCase() + plan.slice(1));
 });

@@ -1,0 +1,13 @@
+# Entornos y cachés locales
+tests_automatizados/.venv/
+tests_automatizados/__pycache__/
+tests_automatizados/.pytest_cache/
+
+# Evidencias y reportes generados por ejecuciones locales
+tests_automatizados/evidencias/
+tests_automatizados/reportes/
+
+# Archivos temporales del sistema
+*.pyc
+*.pyo
+*.log

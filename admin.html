@@ -128,10 +128,10 @@
             </div>
         </div>
 
-        <!-- Registro Manual (Pagos en Efectivo) -->
+        <!-- Registro manual de entrada; el cobro se realiza al salir -->
         <div class="panel">
             <div class="panel-header">
-                <h2 class="section-title">Registrar Pago en Efectivo</h2>
+                <h2 class="section-title">Registrar entrada manual</h2>
             </div>
             <div class="registro-manual-form">
                 <div class="registro-grid">
@@ -152,6 +152,10 @@
                         <input type="tel" id="reg-telefono" placeholder="Ej: 3001234567">
                     </div>
                     <div class="form-group">
+                        <label for="reg-correo">Correo</label>
+                        <input type="email" id="reg-correo" placeholder="correo@ejemplo.com">
+                    </div>
+                    <div class="form-group">
                         <label for="reg-plan">Plan / Tarifa</label>
                         <select id="reg-plan">
                             <option value="diario">Diario — $2,000</option>
@@ -167,7 +171,7 @@
                         </select>
                     </div>
                 </div>
-                <button class="btn-registrar" id="btn-registrar-manual">💵 Registrar Pago en Efectivo</button>
+                <button class="btn-registrar" id="btn-registrar-manual">Generar ticket de entrada</button>
                 <div class="registro-exito hidden" id="registro-exito">
                     <span class="exito-icon">✅</span>
                     <span class="exito-msg">Registro guardado correctamente — Ref: <strong id="reg-ref"></strong></span>
@@ -313,7 +317,7 @@
             <div class="panel-body panel-body-padded">
                 <p class="panel-subtitle">Personaliza los precios oficiales del estacionamiento. Se sincronizan en tiempo real con la pasarela de pagos.</p>
                 <div class="tarifas-grid">
-                    <!-- Tarifa Hora -->
+                    <!-- Tarifa Hora retirada: el cobro mínimo es diario.
                     <div class="tarifa-card">
                         <div class="tarifa-card-header">
                             <div class="tarifa-card-icon">⏱️</div>
@@ -328,6 +332,7 @@
                         </div>
                     </div>
 
+                    -->
                     <!-- Tarifa Diario -->
                     <div class="tarifa-card">
                         <div class="tarifa-card-header">
@@ -470,7 +475,7 @@
                         <label for="rep-filtro-tarifa">Filtrar por Plan</label>
                         <select id="rep-filtro-tarifa" class="form-select-clean">
                             <option value="">Todos los planes</option>
-                            <option value="hora">⏱️ Por Hora</option>
+                            <!-- Tarifa por hora retirada: el cobro mínimo es diario. -->
                             <option value="diario">☀️ Diario</option>
                             <option value="semanal">📅 Semanal</option>
                             <option value="mensual">🏢 Mensual</option>
@@ -481,9 +486,10 @@
                     <button class="btn-unimeta btn-unimeta-primary" onclick="generarReporteAdmin()">
                         🔍 Generar Reporte
                     </button>
-                    <button class="btn-unimeta btn-unimeta-success" onclick="exportarReporteCSV()">
+                    <button class="btn-unimeta btn-unimeta-success" onclick="exportarReporteExcel()">
                         📥 Exportar CSV / Excel
                     </button>
+                    <button class="btn-unimeta btn-unimeta-outline" onclick="exportarReportePDF()">📄 Exportar PDF</button>
                 </div>
 
                 <!-- Resultado de reporte -->
@@ -523,6 +529,32 @@
         </div>
 
         <!-- Módulo de Cesión de Plazas (Objetivo 5) -->
+        <div class="panel" id="panel-trabajadores-exentos">
+            <div class="panel-header">
+                <div>
+                    <h2 class="section-title">👷 Trabajadores exentos</h2>
+                    <p class="panel-subtitle">Personas autorizadas que utilizan el parqueadero sin pagar.</p>
+                </div>
+            </div>
+            <div class="panel-body panel-body-padded">
+                <div class="modern-grid-3">
+                    <div class="form-group-clean"><label>Nombre</label><input id="trab-nombre" class="form-input-clean"></div>
+                    <div class="form-group-clean"><label>Cédula</label><input id="trab-cedula" class="form-input-clean"></div>
+                    <div class="form-group-clean"><label>Código laboral</label><input id="trab-codigo" class="form-input-clean"></div>
+                    <div class="form-group-clean"><label>Área</label><input id="trab-area" class="form-input-clean" placeholder="Mantenimiento"></div>
+                    <div class="form-group-clean"><label>Cargo</label><input id="trab-cargo" class="form-input-clean"></div>
+                    <div class="form-group-clean"><label>Placa autorizada</label><input id="trab-placa" class="form-input-clean" maxlength="7"></div>
+                </div>
+                <div style="display:flex;gap:12px;margin-top:12px;flex-wrap:wrap;">
+                    <button class="btn-unimeta btn-unimeta-primary" onclick="guardarTrabajadorAdmin()">Guardar autorización</button>
+                    <button class="btn-unimeta btn-unimeta-success" onclick="generarReporteTrabajadores()">Generar reporte exentos</button>
+                    <button class="btn-unimeta btn-unimeta-outline" onclick="exportarTrabajadoresExcel()">Excel exentos</button>
+                    <button class="btn-unimeta btn-unimeta-outline" onclick="exportarTrabajadoresPDF()">PDF exentos</button>
+                </div>
+                <div id="trabajadores-resultado" style="margin-top:18px;overflow:auto;"></div>
+            </div>
+        </div>
+
         <div class="panel" id="panel-cesiones">
             <div class="panel-header">
                 <div>
@@ -754,6 +786,7 @@
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="db.js"></script>
+    <script src="parking-db.js"></script>
     <script src="admin.js"></script>
 </body>
 
