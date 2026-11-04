@@ -149,4 +149,79 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Cargar disponibilidad en vivo y tarifas al iniciar
+    cargarDisponibilidadLive();
+    cargarTarifasLanding();
+
+    // Refrescar disponibilidad cada 25 segundos
+    setInterval(cargarDisponibilidadLive, 25000);
 });
+
+// ===== Contador en vivo de espacios disponibles =====
+async function cargarDisponibilidadLive() {
+    const textEl = document.getElementById('live-count-text');
+    const badgeEl = document.getElementById('live-availability');
+    if (!textEl) return;
+
+    try {
+        const ahora = new Date().toISOString();
+        const { data, error } = await db
+            .from('checkins')
+            .select('espacio_numero')
+            .gt('auto_liberar_a', ahora)
+            .is('fecha_salida', null);
+
+        if (error) throw error;
+
+        const ocupados = Array.isArray(data) ? data.length : 0;
+        const total = 33;
+        const libres = Math.max(0, total - ocupados);
+
+        textEl.innerHTML = `<strong>${libres} de ${total}</strong> espacios disponibles ahora`;
+        if (badgeEl) {
+            badgeEl.classList.remove('ocupado-total', 'alerta-baja');
+            if (libres === 0) {
+                badgeEl.classList.add('ocupado-total');
+                textEl.innerHTML = `<strong>Parqueadero lleno</strong> (0/${total} disponibles)`;
+            } else if (libres <= 5) {
+                badgeEl.classList.add('alerta-baja');
+            }
+        }
+    } catch (e) {
+        console.warn('No se pudo actualizar disponibilidad en vivo:', e);
+        if (textEl) {
+            textEl.innerHTML = `<strong>33</strong> espacios disponibles en total`;
+        }
+    }
+}
+
+// ===== Cargar tarifas dinámicas desde Supabase =====
+async function cargarTarifasLanding() {
+    try {
+        const { data, error } = await db.from('tarifas').select('*').eq('activo', true);
+        if (error || !data || data.length === 0) return;
+
+        data.forEach(t => {
+            const precioFmt = '$' + Number(t.precio).toLocaleString('es-CO');
+            if (t.tipo_servicio === 'diario') {
+                const el = document.getElementById('precio-tarifa-diario');
+                const btn = document.getElementById('btn-tarifa-diario');
+                if (el) el.innerHTML = `${precioFmt} <span>/ día</span>`;
+                if (btn) btn.setAttribute('onclick', `location.href='pago.html?plan=diario&precio=${t.precio}&nombre=Diario'`);
+            } else if (t.tipo_servicio === 'semanal') {
+                const el = document.getElementById('precio-tarifa-semanal');
+                const btn = document.getElementById('btn-tarifa-semanal');
+                if (el) el.innerHTML = `${precioFmt} <span>/ semana</span>`;
+                if (btn) btn.setAttribute('onclick', `location.href='pago.html?plan=semanal&precio=${t.precio}&nombre=Semanal'`);
+            } else if (t.tipo_servicio === 'mensual') {
+                const el = document.getElementById('precio-tarifa-mensual');
+                const btn = document.getElementById('btn-tarifa-mensual');
+                if (el) el.innerHTML = `${precioFmt} <span>/ mes</span>`;
+                if (btn) btn.setAttribute('onclick', `location.href='pago.html?plan=mensual&precio=${t.precio}&nombre=Mensual'`);
+            }
+        });
+    } catch (err) {
+        console.warn('Tarifas por defecto usadas:', err);
+    }
+}

@@ -11,3 +11,10 @@ tests_automatizados/reportes/
 *.pyc
 *.pyo
 *.log
+.env
+.env.local
+.env.*.local
+node_modules/
+.vercel
+.DS_Store
+Thumbs.db

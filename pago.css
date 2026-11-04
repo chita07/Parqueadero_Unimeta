@@ -12,6 +12,10 @@ body {
     min-height: 100vh;
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* ===== Header ===== */
 header {
     background-color: #E30614;
@@ -828,3 +832,72 @@ footer p {
 .custom-dialog-btn-secondary:hover {
     background: #e4e4e4;
 }
+
+/* ===== Spinner Overlay & Comprobante Button ===== */
+.pago-spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.25s ease;
+}
+
+.pago-spinner-overlay.hidden {
+    display: none !important;
+}
+
+.pago-spinner-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 36px 32px;
+    width: 90%;
+    max-width: 380px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.pago-spinner-ring {
+    width: 54px;
+    height: 54px;
+    border: 4px solid #f1f5f9;
+    border-top: 4px solid #E30614;
+    border-right: 4px solid #FFCD1C;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.pago-progress-track {
+    width: 100%;
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 14px;
+}
+
+.pago-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #E30614, #FFCD1C);
+    border-radius: 999px;
+    transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-descargar-comprobante:hover {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    transform: translateY(-1px);
+}

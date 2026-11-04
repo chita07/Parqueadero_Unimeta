@@ -16,6 +16,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         const entry = (await parkingDB.all('estancias')).find(x => x.ticket_entrada === ticket);
         if (entry) { miCheckin = entry; mostrarPanelCheckin(entry); }
     }
+
+    // Restaurar temporizador desde sessionStorage (sobrevive recarga)
+    const savedTimer = sessionStorage.getItem('unimeta_timer_fin');
+    const savedCheckinId = sessionStorage.getItem('unimeta_checkin_id');
+    if (savedTimer && savedCheckinId) {
+        const fechaFin = new Date(savedTimer);
+        if (fechaFin > new Date()) {
+            iniciarTemporizador(fechaFin);
+            // Intentar restaurar el panel
+            const { data: ci } = await db.from('checkins').select('*').eq('id', savedCheckinId).single();
+            if (ci) {
+                miCheckin = ci;
+                const { data: pago } = await db.from('pagos').select('*').eq('id', ci.pago_id).single();
+                if (pago) mostrarPanelCheckin(ci, pago);
+                await cargarDatos();
+            }
+        } else {
+            sessionStorage.removeItem('unimeta_timer_fin');
+            sessionStorage.removeItem('unimeta_checkin_id');
+        }
+    }
+
+    // Auto-refresh del estado del mapa cada 30 segundos
+    setInterval(async () => {
+        await limpiarCheckinsPasados();
+        await cargarDatos();
+    }, 30000);
 });
 
 function getJornadaActual() {
@@ -48,6 +75,39 @@ function renderizarEspacios() {
         const next = el.cloneNode(true);
         next.addEventListener('click', () => entry && mostrarTooltip(numero, entry));
         el.parentNode.replaceChild(next, el);
+/* Legacy Supabase map renderer retained for reference during migration.
+        const numero = parseInt(el.dataset.numero);
+        const checkin  = checkinsMapa[numero];
+        const cesion   = cesionesMapa[numero];
+        const reserva  = reservasMapa[numero];
+
+        el.classList.remove('libre', 'ocupado', 'mi-espacio', 'cedida', 'reservada', 'just-assigned');
+
+        let esMio = false;
+        if (checkin && miCheckin && checkin.id === miCheckin.id) esMio = true;
+
+        if (esMio) {
+            el.classList.add('mi-espacio');
+            el.innerHTML = `<span class="moto-icon">🏍️</span><span class="slot-num">${numero}</span>`;
+            setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'center' }), 400);
+        } else if (checkin) {
+            el.classList.add('ocupado');
+            el.innerHTML = `<span class="moto-icon">🏍️</span><span class="slot-num">${numero}</span>`;
+        } else if (cesion) {
+            el.classList.add('cedida');
+            el.innerHTML = `<span class="slot-num">${numero}</span>`;
+        } else if (reserva) {
+            el.classList.add('reservada');
+            el.innerHTML = `<span class="slot-num">${numero}</span>`;
+        } else {
+            el.classList.add('libre');
+            el.innerHTML = `<span class="slot-num">${numero}</span>`;
+        }
+
+        const nuevo = el.cloneNode(true);
+        nuevo.addEventListener('click', () => handleClick(numero, checkin, cesion, reserva));
+        el.parentNode.replaceChild(nuevo, el);
+*/
     });
 }
 
@@ -96,6 +156,159 @@ async function realizarCheckin() {
     } finally {
         btn.disabled = false;
         btn.textContent = 'Ya llegué →';
+/* Legacy online check-in flow retained for reference during migration.
+    btn.textContent = 'Verificando...';
+
+    const ahora = new Date().toISOString();
+    const jornadaActual = getJornadaActual();
+
+    // 1. Verificar que la placa tiene una suscripción/pago activo
+    const { data: pagos, error: errPago } = await db
+        .from('pagos')
+        .select('*')
+        .ilike('placa', placa)
+        .gt('fecha_fin', ahora)
+        .order('fecha_inicio', { ascending: false })
+        .limit(1);
+
+    if (errPago || !pagos || pagos.length === 0) {
+        mostrarResultado('❌ No se encontró una suscripción activa para la placa <strong>' + placa + '</strong>. Por favor verifica o <a href="pago.html">realiza tu pago</a>.', 'error');
+        btn.disabled = false; btn.textContent = 'Ya llegué →';
+        return;
+    }
+
+    const pago = pagos[0];
+
+    // 2. Verificar que no tenga ya un check-in activo hoy (sin salida)
+    const { data: checkinExistente } = await db
+        .from('checkins')
+        .select('*')
+        .ilike('placa', placa)
+        .gt('auto_liberar_a', ahora)
+        .is('fecha_salida', null)
+        .limit(1);
+
+    if (checkinExistente && checkinExistente.length > 0) {
+        const ci = checkinExistente[0];
+        miCheckin = ci;
+        await cargarDatos();
+        mostrarResultado(`✅ Ya tienes un check-in activo. Tu espacio es el <strong>#${ci.espacio_numero}</strong>. Se libera a las ${formatHoraSimple(ci.auto_liberar_a)}.`, 'success');
+        mostrarPanelCheckin(ci, pago);
+        btn.disabled = false; btn.textContent = 'Ya llegué →';
+        return;
+    }
+
+    // 3. Determinar jornada: usar la jornada actual si está activa, o la del pago
+    const jornada = jornadaActual || pago.jornada || 'diurna';
+
+    // 4. Buscar espacio libre (no presente en check-ins activos)
+    const espaciosOcupados = new Set(Object.keys(checkinsMapa).map(Number));
+    let espacioLibre = null;
+    for (let i = 1; i <= TOTAL_ESPACIOS; i++) {
+        if (!espaciosOcupados.has(i)) { espacioLibre = i; break; }
+    }
+
+    if (!espacioLibre) {
+        mostrarResultado('⚠️ El parqueadero está lleno en este momento. Por favor espera a que se libere un espacio.', 'warning');
+        btn.disabled = false; btn.textContent = 'Ya llegué →';
+        return;
+    }
+
+    // 5. Calcular hora de auto-liberación
+    const autoLiberarA = getAutoLiberaA(jornada);
+
+    // 6. Insertar check-in
+    const { data: nuevoCheckin, error: errCheckin } = await db
+        .from('checkins')
+        .insert([{
+            pago_id:        pago.id,
+            placa:          placa,
+            nombre:         pago.nombre,
+            espacio_numero: espacioLibre,
+            jornada:        jornada,
+            auto_liberar_a: autoLiberarA.toISOString()
+        }])
+        .select()
+        .single();
+
+    if (errCheckin) {
+        mostrarResultado('❌ Error al registrar tu llegada: ' + errCheckin.message, 'error');
+        btn.disabled = false; btn.textContent = 'Ya llegué →';
+        return;
+    }
+
+    miCheckin = nuevoCheckin;
+    await cargarDatos();
+
+    // Guardar en sessionStorage para persistir el temporizador tras recarga
+    sessionStorage.setItem('unimeta_timer_fin', autoLiberarA.toISOString());
+    sessionStorage.setItem('unimeta_checkin_id', nuevoCheckin.id);
+
+    // Animación en el espacio asignado
+    setTimeout(() => {
+        const espacioEl = document.querySelector(`.espacio[data-numero="${espacioLibre}"]`);
+        if (espacioEl) espacioEl.classList.add('just-assigned');
+    }, 100);
+
+    // Sonido suave de confirmación
+    tocarSonidoExito();
+
+    mostrarResultado(`🎉 ¡Bienvenido! Tu espacio asignado es el <strong>#${espacioLibre}</strong>. Se libera automáticamente a las ${formatHoraSimple(autoLiberarA.toISOString())}.`, 'success');
+    mostrarPanelCheckin(nuevoCheckin, pago);
+
+    btn.disabled = false;
+    btn.textContent = 'Ya llegué →';
+}
+
+function mostrarResultado(html, tipo) {
+    const el = document.getElementById('checkin-resultado');
+    el.innerHTML = html;
+    el.className = 'checkin-resultado checkin-resultado-' + tipo;
+}
+
+function formatHoraSimple(isoStr) {
+    return new Date(isoStr).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+// ===== Panel de reserva (panel inferior) =====
+function mostrarPanelCheckin(checkin, pago) {
+    const panel = document.getElementById('panel-reserva');
+    panel.classList.remove('hidden');
+
+    document.getElementById('reserva-espacio').querySelector('.espacio-big').textContent = '#' + checkin.espacio_numero;
+    document.getElementById('reserva-nombre').textContent  = pago.nombre || '—';
+    document.getElementById('reserva-placa').textContent   = pago.placa  || '—';
+    document.getElementById('reserva-plan').textContent    = planNombres[pago.tipo_servicio] || pago.tipo_servicio;
+    document.getElementById('reserva-jornada').textContent = JORNADAS[checkin.jornada]?.label || checkin.jornada;
+    document.getElementById('reserva-auto-libera').textContent = formatHoraSimple(checkin.auto_liberar_a);
+    document.getElementById('reserva-ref').textContent     = pago.referencia || '—';
+
+    // Reemplazar temporizador con cuenta regresiva a auto-liberación
+    iniciarTemporizador(new Date(checkin.auto_liberar_a));
+}
+
+// ===== Temporizador =====
+let tempInterval = null;
+function iniciarTemporizador(fechaFin) {
+    if (tempInterval) clearInterval(tempInterval);
+    const el = document.getElementById('temp-valor');
+    const textoEl = el ? el.previousElementSibling : null;
+    if (textoEl) textoEl.textContent = 'Espacio libre en: ';
+    function tick() {
+        const diff = fechaFin - new Date();
+        if (diff <= 0) {
+            if (el) { el.textContent = 'Espacio liberado'; el.style.color = '#E30614'; }
+            clearInterval(tempInterval);
+            // Limpiar sessionStorage al expirar
+            sessionStorage.removeItem('unimeta_timer_fin');
+            sessionStorage.removeItem('unimeta_checkin_id');
+            return;
+        }
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        if (el) el.textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+*/
     }
 }
 
@@ -179,4 +392,100 @@ function imprimirTicketSalida() {
     if (!w) return;
     w.document.write(`<html><head><title>${result.ticket}</title><style>body{font-family:Arial;padding:20px;max-width:360px}h2{text-align:center}.row{margin:8px 0}</style></head><body><h2>PARQUEADERO UNIMETA</h2><p style="text-align:center">TICKET DE SALIDA</p><hr><div class="row"><b>Ticket:</b> ${result.ticket}</div><div class="row"><b>Entrada:</b> ${new Date(e.entrada_at).toLocaleString('es-CO')}</div><div class="row"><b>Salida:</b> ${new Date(e.salida_at).toLocaleString('es-CO')}</div><div class="row"><b>Placa:</b> ${e.placa}</div><div class="row"><b>Usuario:</b> ${e.nombre}</div><div class="row"><b>Tiempo:</b> ${e.horas_uso} horas</div><div class="row"><b>Estado:</b> ${result.exempt ? 'EXENTO' : result.reentry ? 'SIN COBRO - SERVICIO VIGENTE' : 'PAGADO'}</div><div class="row"><b>Total:</b> $${Number(result.charge).toLocaleString('es-CO')}</div><hr><script>window.print();</script></body></html>`);
     w.document.close();
+/* Legacy online exit flow retained for reference during migration.
+    if (!miCheckin) {
+        await uiAlert('Sin espacio activo', 'No tienes un espacio asignado activo.', 'ℹ️');
+        return;
+    }
+
+    const confirmacion = await uiConfirm(
+        'Confirmar Salida',
+        `¿Confirmas la salida de tu vehículo (${miCheckin.placa}) del espacio #${miCheckin.espacio_numero}? El espacio quedará disponible para otros.`,
+        '🚫'
+    );
+    if (!confirmacion) return;
+
+    const ahoraIso = new Date().toISOString();
+    const { error } = await db
+        .from('checkins')
+        .update({ fecha_salida: ahoraIso })
+        .eq('id', miCheckin.id);
+
+    if (error) {
+        await uiAlert('Error', 'Error al registrar salida: ' + error.message, '❌');
+        return;
+    }
+
+    await uiAlert('Salida Registrada', `¡Hasta pronto! El espacio #${miCheckin.espacio_numero} ha sido liberado exitosamente.`, '✅');
+
+    // Limpiar sessionStorage
+    sessionStorage.removeItem('unimeta_timer_fin');
+    sessionStorage.removeItem('unimeta_checkin_id');
+
+    miCheckin = null;
+    document.getElementById('panel-reserva').classList.add('hidden');
+    document.getElementById('checkin-resultado').classList.add('hidden');
+    document.getElementById('checkin-placa').value = '';
+    await cargarDatos();
+*/
+}
+
+// ===== Sonido de confirmación (web audio API) =====
+function tocarSonidoExito() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const notas = [523, 659, 784]; // Do, Mi, Sol
+        notas.forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            const t = ctx.currentTime + i * 0.12;
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(0.25, t + 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+            osc.start(t);
+            osc.stop(t + 0.25);
+        });
+    } catch(e) { /* AudioContext no disponible */ }
+}
+
+// ===== UI Dialogs personalizados =====
+function uiAlert(titulo, mensaje, icono = '⚠️') {
+    return new Promise((resolve) => {
+        document.getElementById('custom-dialog-title').textContent = titulo;
+        document.getElementById('custom-dialog-msg').textContent = mensaje;
+        document.getElementById('custom-dialog-icon').textContent = icono;
+        const actions = document.getElementById('custom-dialog-actions');
+        actions.innerHTML = '<button class="custom-dialog-btn custom-dialog-btn-primary" id="btn-dialog-ok">Aceptar</button>';
+        document.getElementById('custom-dialog-overlay').classList.remove('hidden');
+        document.getElementById('btn-dialog-ok').onclick = () => {
+            document.getElementById('custom-dialog-overlay').classList.add('hidden');
+            resolve();
+        };
+    });
+}
+
+function uiConfirm(titulo, mensaje, icono = '❓') {
+    return new Promise((resolve) => {
+        document.getElementById('custom-dialog-title').textContent = titulo;
+        document.getElementById('custom-dialog-msg').textContent = mensaje;
+        document.getElementById('custom-dialog-icon').textContent = icono;
+        const actions = document.getElementById('custom-dialog-actions');
+        actions.innerHTML = `
+            <button class="custom-dialog-btn custom-dialog-btn-secondary" id="btn-dialog-cancel">Cancelar</button>
+            <button class="custom-dialog-btn custom-dialog-btn-primary" id="btn-dialog-ok">Confirmar</button>
+        `;
+        document.getElementById('custom-dialog-overlay').classList.remove('hidden');
+        document.getElementById('btn-dialog-ok').onclick = () => {
+            document.getElementById('custom-dialog-overlay').classList.add('hidden');
+            resolve(true);
+        };
+        document.getElementById('btn-dialog-cancel').onclick = () => {
+            document.getElementById('custom-dialog-overlay').classList.add('hidden');
+            resolve(false);
+        };
+    });
 }
