@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (entry) { miCheckin = entry; mostrarPanelCheckin(entry); }
     }
 
+    /* Legacy session restoration from the old Supabase check-in model.
     // Restaurar temporizador desde sessionStorage (sobrevive recarga)
     const savedTimer = sessionStorage.getItem('unimeta_timer_fin');
     const savedCheckinId = sessionStorage.getItem('unimeta_checkin_id');
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await limpiarCheckinsPasados();
         await cargarDatos();
     }, 30000);
+    */
 });
 
 function getJornadaActual() {

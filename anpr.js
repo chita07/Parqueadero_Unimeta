@@ -920,7 +920,30 @@ async function procesarPlaca() {
     }
 }
 
-// ===== 9. Verificar Estado de Pago en Supabase (Consulta No Bloqueante) =====
+// ===== 9. Verificar vigencia local (con fallback remoto para históricos) =====
+async function consultarVigenciaLocal(placa) {
+    const servicios = await parkingDB.activeServices(placa);
+    const estancias = (await parkingDB.all('estancias'))
+        .filter(item => item.placa === placa)
+        .sort((a, b) => String(b.entrada_at).localeCompare(String(a.entrada_at)));
+    const trabajadores = await parkingDB.all('trabajadores');
+    const trabajador = trabajadores.find(item => item.activo !== false && item.placa_autorizada && item.placa_autorizada.replace(/[- ]/g, '').toUpperCase() === placa);
+    const servicio = servicios[0];
+    const estancia = estancias[0];
+
+    if (!servicio && !trabajador) return null;
+    return {
+        id: estancia?.id || null,
+        placa,
+        nombre: estancia?.nombre || trabajador?.nombre || 'Usuario registrado',
+        tipo_servicio: servicio?.tipo_plan || 'exento',
+        fecha_fin: servicio?.vigente_hasta || '9999-12-31T23:59:59.999Z',
+        jornada: 'Operación continua',
+        referencia: estancia?.ticket_entrada || 'AUTORIZADO-LOCAL',
+        exento_cobro: Boolean(trabajador || servicio?.exento_cobro)
+    };
+}
+
 async function verificarPago() {
     const inputCorregido = document.getElementById('placa-corregida').value.trim().toUpperCase();
     const placaFinal = inputCorregido || placaDetectada;
@@ -943,31 +966,36 @@ async function verificarPago() {
     btnVerificar.disabled = true;
     btnVerificar.textContent = 'Consultando...';
 
-    const ahoraIso = new Date().toISOString();
+    // La validación principal es local para que funcione sin internet.
+    let pago = await consultarVigenciaLocal(placaFinal);
 
-    // 1. Consultar si tiene pago vigente
-    const { data: pagos, error: errPago } = await db
-        .from('pagos')
-        .select('*')
-        .ilike('placa', placaFinal)
-        .gt('fecha_fin', ahoraIso)
-        .order('fecha_inicio', { ascending: false })
-        .limit(1);
+    // Compatibilidad temporal con registros históricos del esquema anterior.
+    if (!pago && navigator.onLine) {
+        const { data: pagos } = await db
+            .from('pagos')
+            .select('*')
+            .ilike('placa', placaFinal)
+            .gt('fecha_fin', new Date().toISOString())
+            .order('fecha_inicio', { ascending: false })
+            .limit(1);
+        pago = pagos?.[0] || null;
+    }
 
     btnVerificar.disabled = false;
     btnVerificar.textContent = '🔍 Validar en Base de Datos';
 
+    /* Legacy remote error branch retained for historical fallback.
     if (errPago) {
         await uiAlert('Error de Conexión', 'No se pudo consultar Supabase: ' + errPago.message, '❌');
         return;
     }
+    */
 
-    const tienePago = Boolean(pagos && pagos.length > 0);
-    const pago = tienePago ? pagos[0] : null;
+    const tienePago = Boolean(pago);
 
     // 2. Registrar en la tabla alertas_acceso
     try {
-        await db.from('alertas_acceso').insert([{
+        if (navigator.onLine) await db.from('alertas_acceso').insert([{
             placa_detectada: placaDetectada || placaFinal,
             placa_corregida: inputCorregido || null,
             tiene_pago: tienePago,
@@ -1173,14 +1201,20 @@ async function buscarSugerenciaInteligente(placaLeida) {
     if (!box || !placaLeida) return;
 
     try {
-        // Consultar placas recientes en pagos
-        const { data: pagos, error } = await db
-            .from('pagos')
-            .select('placa, nombre')
-            .order('fecha_inicio', { ascending: false })
-            .limit(30);
+        // Las sugerencias también parten de la copia local.
+        let pagos = (await parkingDB.all('estancias'))
+            .sort((a, b) => String(b.entrada_at).localeCompare(String(a.entrada_at)))
+            .slice(0, 30);
+        if (!pagos.length && navigator.onLine) {
+            const response = await db
+                .from('pagos')
+                .select('placa, nombre')
+                .order('fecha_inicio', { ascending: false })
+                .limit(30);
+            pagos = response.data || [];
+        }
 
-        if (error || !pagos || pagos.length === 0) {
+        if (!pagos.length) {
             ocultarSugerenciaCorreccion();
             return;
         }

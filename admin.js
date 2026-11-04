@@ -1,5 +1,5 @@
-const planNombres = { hora: 'Por Hora', diario: 'Día', semanal: 'Semana', mensual: 'Mes' };
-const planNombresAdmin = { hora: 'Por Hora', diario: 'Diario', semanal: 'Semanal', mensual: 'Mensual' };
+const planNombres = { diario: 'Día', semanal: 'Semana', mensual: 'Mes', exento: 'Exento' };
+const planNombresAdmin = { diario: 'Diario', semanal: 'Semanal', mensual: 'Mensual', exento: 'Exento' };
 
 // Formatear hora
 function formatHora(fecha) {
@@ -967,7 +967,6 @@ async function cargarTarifasAdminLegacy() {
 }
 
 async function guardarTarifasAdminLegacy() {
-    const hora = parseInt(document.getElementById('cfg-tarifa-hora').value || '1500');
     const diario = parseInt(document.getElementById('cfg-tarifa-diario').value || '2000');
     const semanal = parseInt(document.getElementById('cfg-tarifa-semanal').value || '10000');
     const mensual = parseInt(document.getElementById('cfg-tarifa-mensual').value || '45000');
@@ -977,7 +976,6 @@ async function guardarTarifasAdminLegacy() {
     btn.textContent = 'Guardando...';
 
     const updates = [
-        { tipo_servicio: 'hora', nombre_display: 'Por Hora', precio: hora, descripcion: 'Tarifa por hora de permanencia', activo: true },
         { tipo_servicio: 'diario', nombre_display: 'Diario', precio: diario, descripcion: 'Tarifa diaria', activo: true },
         { tipo_servicio: 'semanal', nombre_display: 'Semanal', precio: semanal, descripcion: 'Tarifa semanal', activo: true },
         { tipo_servicio: 'mensual', nombre_display: 'Mensual', precio: mensual, descripcion: 'Tarifa mensual', activo: true }
@@ -1271,10 +1269,15 @@ let datosTrabajadores = [];
 
 function fechaTextoNueva(value) { return value ? new Date(value).toLocaleString('es-CO') : '—'; }
 function reporteRowsNuevo(records) {
-    return records.map(r => [r.ticket_entrada || '', r.ticket_salida || '', r.placa || '', r.nombre || '', r.cedula || '', r.tipo_usuario || '', r.area_trabajo || '', r.plan || '', r.entrada_at || '', r.salida_at || '', r.horas_uso ?? '', r.valor_cobrado ?? 0, r.estado_pago || '']);
+    return records.map(r => [
+        r.ticket_entrada || '', r.ticket_salida || '', r.placa || '', r.nombre || '', r.cedula || '',
+        r.telefono || '', r.correo || '', r.tipo_usuario || '', r.programa_academico || '',
+        r.codigo_laboral || '', r.area_trabajo || '', r.cargo || '', r.plan || '', r.entrada_at || '',
+        r.salida_at || '', r.horas_uso ?? '', r.valor_cobrado ?? 0, r.estado_pago || ''
+    ]);
 }
 function excelHtmlNuevo(records, title) {
-    const headers = ['Ticket entrada', 'Ticket salida', 'Placa', 'Nombre', 'Cédula', 'Tipo usuario', 'Área', 'Plan', 'Entrada', 'Salida', 'Horas', 'Valor', 'Estado'];
+    const headers = ['Ticket entrada', 'Ticket salida', 'Placa', 'Nombre', 'Cédula', 'Teléfono', 'Correo', 'Tipo usuario', 'Programa', 'Código laboral', 'Área', 'Cargo', 'Plan', 'Entrada', 'Salida', 'Horas', 'Valor', 'Estado'];
     return `<html><meta charset="utf-8"><table><caption>${title}</caption><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr>${reporteRowsNuevo(records).map(row => `<tr>${row.map(c => `<td>${String(c).replace(/[<>&]/g, '')}</td>`).join('')}</tr>`).join('')}</table></html>`;
 }
 function descargarArchivoNuevo(content, filename, type) {
@@ -1319,19 +1322,22 @@ async function cargarTrabajadoresAdmin() {
 async function guardarTrabajadorAdmin() {
     const worker = { nombre: document.getElementById('trab-nombre').value.trim(), cedula: document.getElementById('trab-cedula').value.trim(), codigo_laboral: document.getElementById('trab-codigo').value.trim(), area_trabajo: document.getElementById('trab-area').value.trim(), cargo: document.getElementById('trab-cargo').value.trim(), placa_autorizada: document.getElementById('trab-placa').value.trim().toUpperCase() };
     if (!worker.nombre || !worker.cedula || !worker.area_trabajo) { await uiAlert('Datos incompletos', 'Nombre, cédula y área son obligatorios.'); return; }
-    await parkingDB.saveWorker(worker); await cargarTrabajadoresAdmin();
+    const existing = (await parkingDB.all('trabajadores')).find(item => String(item.cedula) === worker.cedula);
+    await parkingDB.saveWorker({ ...worker, id: existing?.id }); await cargarTrabajadoresAdmin();
     await uiAlert('Guardado', 'Trabajador autorizado localmente y pendiente de sincronización si no hay internet.', '✅');
 }
 async function generarReporteTrabajadores() {
     datosTrabajadores = await parkingDB.workerRecords(document.getElementById('rep-fecha-desde').value, document.getElementById('rep-fecha-hasta').value);
     document.getElementById('trabajadores-resultado').insertAdjacentHTML('beforeend', `<p><b>${datosTrabajadores.length}</b> movimientos exentos encontrados.</p>`);
 }
-function exportarTrabajadoresExcel() {
-    if (!datosTrabajadores.length) { generarReporteTrabajadores().then(exportarTrabajadoresExcel); return; }
+async function exportarTrabajadoresExcel() {
+    if (!datosTrabajadores.length) await generarReporteTrabajadores();
+    if (!datosTrabajadores.length) return;
     descargarArchivoNuevo(excelHtmlNuevo(datosTrabajadores, 'Trabajadores exentos'), `Reporte_Trabajadores_Exentos_${new Date().toISOString().slice(0, 10)}.xls`, 'application/vnd.ms-excel;charset=utf-8');
 }
-function exportarTrabajadoresPDF() {
-    if (!datosTrabajadores.length) { generarReporteTrabajadores().then(exportarTrabajadoresPDF); return; }
+async function exportarTrabajadoresPDF() {
+    if (!datosTrabajadores.length) await generarReporteTrabajadores();
+    if (!datosTrabajadores.length) return;
     const win = window.open('', '_blank'); if (!win) return;
     win.document.write(`<html><head><title>Trabajadores exentos</title><style>body{font-family:Arial}table{border-collapse:collapse;width:100%}th,td{border:1px solid #999;padding:5px;font-size:10px}</style></head><body><h2>Trabajadores exentos</h2>${excelHtmlNuevo(datosTrabajadores, '').replace(/<html>|<\/html>|<meta[^>]+>/g, '')}<script>window.print();</script></body></html>`); win.document.close();
 }

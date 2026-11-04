@@ -125,7 +125,11 @@
                 if (item.operation === 'delete') response = await window.remoteDb.from(remoteName).delete().eq('id', item.record.id);
                 else {
                     const payload = { ...item.record };
-                    if (item.table === 'tarifas') delete payload.id;
+                    if (item.table === 'tarifas') {
+                        // tarifas es la tabla antigua: usa id SERIAL y no tiene device_id.
+                        delete payload.id;
+                        delete payload.device_id;
+                    }
                     response = await window.remoteDb.from(remoteName).upsert(payload, { onConflict: item.table === 'tarifas' ? 'tipo_servicio' : 'id' });
                 }
                 if (!response.error) await tx('outbox', 'readwrite', store => store.delete(item.id));
@@ -149,6 +153,16 @@
         updateConnectionBadge();
         window.addEventListener('online', updateConnectionBadge);
         window.addEventListener('offline', updateConnectionBadge);
+        window.addEventListener('parking-sync', event => {
+            if (event.detail?.online) updateConnectionBadge();
+            else {
+                const badge = document.getElementById('parking-connection-status');
+                if (badge) {
+                    badge.textContent = '● Servidor no disponible · guardado local';
+                    badge.style.background = '#B45309';
+                }
+            }
+        });
         setInterval(syncNow, 30000);
     }
 
@@ -300,7 +314,7 @@
         if (entry.salida_at) throw new Error('Esta estancia ya tiene registrada la salida.');
         const service = await get('servicios', entry.servicio_id);
         const exit = new Date();
-        const hours = Math.max(0, Math.ceil((exit - new Date(entry.entrada_at)) / 3600000));
+        const hours = Math.max(0, Math.round(((exit - new Date(entry.entrada_at)) / 3600000) * 100) / 100);
         const alreadyPaid = Boolean(service?.cobro_generado);
         const exempt = Boolean(entry.exento_cobro || service?.exento_cobro);
         const charge = exempt || alreadyPaid ? 0 : await getTariff('diario');

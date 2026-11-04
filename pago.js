@@ -38,33 +38,6 @@ function cambiarTipoUsuario() {
     document.getElementById('group-programa').classList.toggle('hidden', type !== 'estudiante');
     document.getElementById('group-trabajador').classList.toggle('hidden', type !== 'trabajador_universidad');
 }
-function cambiarHoras() {
-    if (planSeleccionado === 'hora') {
-        const horas = parseInt(document.getElementById('horas-permanencia').value || '1');
-        const base = tarifasBase['hora'] || 1500;
-        precioSeleccionado = base * horas;
-        document.getElementById('resumen-total').textContent = '$' + precioSeleccionado.toLocaleString('es-CO');
-        actualizarResumenVigencia();
-    }
-}
-
-function actualizarResumenVigencia() {
-    const el = document.getElementById('resumen-vigencia');
-    if (!el || !planSeleccionado) return;
-    const ahora = new Date();
-    const fin = calcularFechaFin(ahora, planSeleccionado);
-    if (planSeleccionado === 'hora') {
-        const horas = parseInt(document.getElementById('horas-permanencia').value || '2');
-        el.textContent = `${horas} hora(s) (hasta ${fin.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })})`;
-    } else if (planSeleccionado === 'diario') {
-        el.textContent = `Hasta hoy 11:59 PM`;
-    } else if (planSeleccionado === 'semanal') {
-        el.textContent = `7 días (hasta ${fin.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })})`;
-    } else if (planSeleccionado === 'mensual') {
-        el.textContent = `30 días (hasta ${fin.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' })})`;
-    }
-}
-
 function mostrarAvisoDatosRecuperados(entry) {
     let notice = document.getElementById('datos-recuperados-aviso');
     if (!notice) {
@@ -472,7 +445,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     const params = new URLSearchParams(window.location.search);
     const placa = params.get('placa');
-    if (placa) document.getElementById('placa').value = placa.toUpperCase();
+    if (placa) {
+        document.getElementById('placa').value = placa.toUpperCase().replace(/[- ]/g, '');
+        await buscarDatosPorPlaca();
+    }
     const plan = params.get('plan');
     if (plan && ['diario', 'semanal', 'mensual'].includes(plan)) seleccionarPlan(plan, 0, plan.charAt(0).toUpperCase() + plan.slice(1));
 /* Legacy online payment initializer retained for reference during migration.
